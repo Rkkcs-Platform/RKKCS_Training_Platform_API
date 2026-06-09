@@ -24,6 +24,9 @@ export class User {
   @Prop()
   avatar?: string;
 
+  @Prop({ required: false, lowercase: true, trim: true })
+  staffCode: string;
+
   createdAt?: Date;
   updatedAt?: Date;
 }

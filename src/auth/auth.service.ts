@@ -17,6 +17,7 @@ import { JwtPayload } from './types/jwt-payload.type';
 export interface AuthUserResponse {
   id: string;
   name: string;
+  staffCode?: string;
   email: string;
   role: UserRole;
   status: UserStatus;
@@ -47,10 +48,18 @@ export class AuthService {
       throw new ConflictException('Email already registered');
     }
 
+    if (dto.staffCode) {
+      const existingStaffCode = await this.userModel.findOne({ staffCode: dto.staffCode}).exec();
+      if (existingStaffCode) {
+        throw new ConflictException('Staff code already registered');
+      }
+    }
+
     const passwordHash = await bcrypt.hash(dto.password, this.saltRounds);
     const user = await this.userModel.create({
       name: dto.name.trim(),
       email,
+      staffCode: dto.staffCode?.trim() || '',
       passwordHash,
       role: UserRole.USER,
       status: UserStatus.ACTIVE,
@@ -121,6 +130,7 @@ export class AuthService {
       status: user.status,
       avatar: user.avatar,
       createdAt: user.createdAt,
+      staffCode: user.staffCode || ''
     };
   }
 }

@@ -24,4 +24,9 @@ export class RegisterDto {
   @MinLength(6)
   @MaxLength(64)
   password: string;
+
+  @ApiProperty({ example: '4819', maxLength: 4 })
+  @IsString()
+  @IsNotEmpty()
+  staffCode: string;
 }
