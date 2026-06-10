@@ -27,7 +27,13 @@ export interface AuthUserResponse {
 
 export interface AuthResponse {
   accessToken: string;
+  refreshToken: string;
   user: AuthUserResponse;
+}
+
+export interface RefreshTokenResponse {
+  accessToken: string;
+  refreshToken: string;
 }
 
 @Injectable()
@@ -61,7 +67,7 @@ export class AuthService {
       email,
       staffCode: dto.staffCode?.trim() || '',
       passwordHash,
-      role: UserRole.USER,
+      role: dto.role || UserRole.USER,
       status: UserStatus.ACTIVE,
     });
 
@@ -103,22 +109,74 @@ export class AuthService {
     return { message: 'Logged out successfully' };
   }
 
+  async refreshTokens(refreshToken: string): Promise<RefreshTokenResponse> {
+    try {
+      const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
+        secret: this.getRefreshSecret(),
+      });
+
+      if (payload.type !== 'refresh') {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      const user = await this.userModel.findById(payload.sub).exec();
+
+      if (!user || user.status !== UserStatus.ACTIVE) {
+        throw new UnauthorizedException('Invalid or inactive account');
+      }
+
+      return this.buildTokenPair(user);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+  }
+
   private buildAuthResponse(user: UserDocument): AuthResponse {
-    const payload: JwtPayload = {
+    const tokens = this.buildTokenPair(user);
+
+    return {
+      ...tokens,
+      user: this.toUserResponse(user),
+    };
+  }
+
+  private buildTokenPair(user: UserDocument): RefreshTokenResponse {
+    const basePayload = {
       sub: user._id.toString(),
       email: user.email,
       role: user.role,
     };
 
-    const expiresIn = this.configService.get<string>('JWT_EXPIRES_IN', '7d');
-    const accessToken = this.jwtService.sign(payload, {
-      expiresIn: expiresIn as `${number}d`,
-    });
+    const accessExpiresIn = this.configService.get<string>(
+      'JWT_ACCESS_EXPIRES_IN',
+      this.configService.get<string>('JWT_EXPIRES_IN', '1h'),
+    );
+    const refreshExpiresIn = this.configService.get<string>(
+      'JWT_REFRESH_EXPIRES_IN',
+      '30d',
+    );
 
-    return {
-      accessToken,
-      user: this.toUserResponse(user),
-    };
+    const accessToken = this.jwtService.sign(
+      { ...basePayload, type: 'access' } satisfies JwtPayload,
+      { expiresIn: accessExpiresIn as `${number}h` },
+    );
+
+    const refreshToken = this.jwtService.sign(
+      { ...basePayload, type: 'refresh' } satisfies JwtPayload,
+      {
+        secret: this.getRefreshSecret(),
+        expiresIn: refreshExpiresIn as `${number}d`,
+      },
+    );
+
+    return { accessToken, refreshToken };
+  }
+
+  private getRefreshSecret(): string {
+    return (
+      this.configService.get<string>('JWT_REFRESH_SECRET') ??
+      `${this.configService.getOrThrow<string>('JWT_SECRET')}_refresh`
+    );
   }
 
   private toUserResponse(user: UserDocument): AuthUserResponse {
