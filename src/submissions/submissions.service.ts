@@ -16,6 +16,7 @@ import {
   parsePagination,
 } from '../common/utils';
 import { SubmissionHistoryQueryDto } from '../common/dto/pagination-query.dto';
+import { AdminSubmissionListQueryDto } from './dto/admin-submission-list-query.dto';
 import { ChallengesService } from '../challenges/challenges.service';
 import { ChallengeDocument } from '../schemas/challenge.schema';
 import {
@@ -151,6 +152,56 @@ export class SubmissionsService {
     return this.toResultResponse(challenge, submission);
   }
 
+  async getAdminSubmissions(query: AdminSubmissionListQueryDto) {
+    if (query.date && !isValidDateString(query.date)) {
+      throw new BadRequestException('Invalid date format. Use YYYY-MM-DD');
+    }
+
+    const { page, limit, skip } = parsePagination(query.page, query.limit);
+    const filter: Record<string, unknown> = {};
+
+    if (query.date) {
+      filter.date = query.date;
+    }
+
+    if (query.status) {
+      filter.status = query.status;
+    }
+
+    const [items, total] = await Promise.all([
+      this.submissionModel
+        .find(filter)
+        .populate('userId', 'name email staffCode')
+        .sort({ date: -1, updatedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec(),
+      this.submissionModel.countDocuments(filter).exec(),
+    ]);
+
+    return {
+      items: items.map((item) => this.toAdminListItem(item)),
+      meta: buildPaginationMeta(total, page, limit),
+    };
+  }
+
+  async getAdminSubmissionById(submissionId: string) {
+    if (!Types.ObjectId.isValid(submissionId)) {
+      throw new BadRequestException('Invalid submission ID');
+    }
+
+    const submission = await this.submissionModel
+      .findById(submissionId)
+      .populate('userId', 'name email staffCode')
+      .exec();
+
+    if (!submission) {
+      throw new NotFoundException('Submission not found');
+    }
+
+    return this.toAdminDetail(submission);
+  }
+
   async getStatistics(user: UserDocument) {
     const submissions = await this.submissionModel
       .find({ userId: user._id })
@@ -228,6 +279,56 @@ export class SubmissionsService {
       wrong: submission.totalWrong,
       status: submission.status,
       startedAt: submission.startedAt,
+    };
+  }
+
+  private toAdminListItem(submission: UserSubmissionDocument) {
+    const user = submission.userId as unknown as UserDocument;
+
+    return {
+      id: submission._id.toString(),
+      date: submission.date,
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        staffCode: user.staffCode,
+      },
+      submitted: submission.totalSubmitted,
+      correct: submission.totalCorrect,
+      wrong: submission.totalWrong,
+      accuracy: submission.accuracy,
+      status: submission.status,
+      startedAt: submission.startedAt,
+      completedAt: submission.completedAt,
+    };
+  }
+
+  private toAdminDetail(submission: UserSubmissionDocument) {
+    const user = submission.userId as unknown as UserDocument;
+
+    return {
+      id: submission._id.toString(),
+      date: submission.date,
+      user: {
+        id: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        staffCode: user.staffCode,
+      },
+      submitted: submission.totalSubmitted,
+      correct: submission.totalCorrect,
+      wrong: submission.totalWrong,
+      accuracy: submission.accuracy,
+      status: submission.status,
+      startedAt: submission.startedAt,
+      completedAt: submission.completedAt,
+      answers: submission.answers.map((answer) => ({
+        order: answer.order,
+        inputCode: answer.inputCode,
+        isCorrect: answer.isCorrect,
+        submittedAt: answer.submittedAt,
+      })),
     };
   }
 
