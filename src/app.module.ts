@@ -8,6 +8,7 @@ import { CommonModule } from './common/common.module';
 import { validateEnv } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health/health.controller';
+import { PingController } from './health/ping.controller';
 import { SeedModule } from './seed/seed.module';
 import { SettingsModule } from './settings/settings.module';
 import { SubmissionsModule } from './submissions/submissions.module';
@@ -33,6 +34,6 @@ import { SubmissionsModule } from './submissions/submissions.module';
     SubmissionsModule,
     SeedModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, PingController],
 })
 export class AppModule {}
