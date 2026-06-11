@@ -25,6 +25,18 @@ class EnvironmentVariables {
 
   @IsOptional()
   @IsString()
+  JWT_ACCESS_EXPIRES_IN?: string;
+
+  @IsOptional()
+  @IsString()
+  JWT_REFRESH_EXPIRES_IN?: string;
+
+  @IsOptional()
+  @IsString()
+  JWT_REFRESH_SECRET?: string;
+
+  @IsOptional()
+  @IsString()
   ADMIN_EMAIL?: string;
 
   @IsOptional()
