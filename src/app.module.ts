@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ActivityLogsModule } from './activity-logs/activity-logs.module';
 import { AuthModule } from './auth/auth.module';
 import { ChallengesModule } from './challenges/challenges.module';
 import { CommonModule } from './common/common.module';
@@ -28,6 +29,7 @@ import { SubmissionsModule } from './submissions/submissions.module';
     ScheduleModule.forRoot(),
     CommonModule,
     DatabaseModule,
+    ActivityLogsModule,
     AuthModule,
     SettingsModule,
     ChallengesModule,
