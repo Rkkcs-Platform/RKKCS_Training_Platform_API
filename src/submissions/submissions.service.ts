@@ -5,11 +5,15 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { ActivityLogsService } from '../activity-logs/activity-logs.service';
+import {
+  ACTIVITY_ACTION,
+} from '../common/constants/activity-action.constant';
+import { ACTIVITY_TARGET } from '../common/constants/activity-target.constant';
 import { SubmissionStatus } from '../common/enums';
 import {
   buildPaginationMeta,
   calculateAccuracy,
-  calculateStreak,
   getTodayDate,
   isValidDateString,
   normalizeCode,
@@ -31,6 +35,7 @@ export class SubmissionsService {
     @InjectModel(UserSubmission.name)
     private readonly submissionModel: Model<UserSubmissionDocument>,
     private readonly challengesService: ChallengesService,
+    private readonly activityLogsService: ActivityLogsService,
   ) {}
 
   async getTodayChallenge(user: UserDocument) {
@@ -84,6 +89,33 @@ export class SubmissionsService {
     }
 
     await submission.save();
+
+    this.activityLogsService.recordFromUser(user, {
+      action: ACTIVITY_ACTION.CODE_SUBMIT,
+      targetType: ACTIVITY_TARGET.SUBMISSION,
+      targetId: submission._id,
+      metadata: {
+        date: challenge.date,
+        order: submission.totalSubmitted,
+        inputCode,
+        isCorrect,
+      },
+    });
+
+    if (completed) {
+      this.activityLogsService.recordFromUser(user, {
+        action: ACTIVITY_ACTION.BATCH_COMPLETED,
+        targetType: ACTIVITY_TARGET.SUBMISSION,
+        targetId: submission._id,
+        metadata: {
+          date: challenge.date,
+          submitted: submission.totalSubmitted,
+          correct: submission.totalCorrect,
+          wrong: submission.totalWrong,
+          accuracy: submission.accuracy,
+        },
+      });
+    }
 
     return {
       isCorrect,
@@ -222,17 +254,12 @@ export class SubmissionsService {
     );
     const totalAttempts = totalCorrect + totalWrong;
 
-    const completedDates = new Set(
-      completedSubmissions.map((item) => item.date),
-    );
-
     return {
       totalChallenges: submissions.length,
       completedChallenges: completedSubmissions.length,
       totalCorrect,
       totalWrong,
       accuracy: calculateAccuracy(totalCorrect, totalAttempts),
-      streak: calculateStreak(completedDates, getTodayDate()),
     };
   }
 

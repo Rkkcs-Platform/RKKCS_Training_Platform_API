@@ -8,6 +8,11 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcrypt';
 import { Model } from 'mongoose';
+import { ActivityLogsService } from '../activity-logs/activity-logs.service';
+import {
+  ACTIVITY_ACTION,
+} from '../common/constants/activity-action.constant';
+import { ACTIVITY_TARGET } from '../common/constants/activity-target.constant';
 import { UserRole, UserStatus } from '../common/enums';
 import { User, UserDocument } from '../schemas/user.schema';
 import { LoginDto } from './dto/login.dto';
@@ -44,6 +49,7 @@ export class AuthService {
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly activityLogsService: ActivityLogsService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponse> {
@@ -69,6 +75,13 @@ export class AuthService {
       passwordHash,
       role: dto.role || UserRole.USER,
       status: UserStatus.ACTIVE,
+    });
+
+    this.activityLogsService.recordFromUser(user, {
+      action: ACTIVITY_ACTION.AUTH_REGISTER,
+      targetType: ACTIVITY_TARGET.USER,
+      targetId: user._id,
+      metadata: { email: user.email, role: user.role },
     });
 
     return this.buildAuthResponse(user);
@@ -98,6 +111,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password');
     }
 
+    this.activityLogsService.recordFromUser(user, {
+      action: ACTIVITY_ACTION.AUTH_LOGIN,
+      targetType: ACTIVITY_TARGET.USER,
+      targetId: user._id,
+      metadata: { email: user.email },
+    });
+
     return this.buildAuthResponse(user);
   }
 
@@ -105,7 +125,13 @@ export class AuthService {
     return this.toUserResponse(user);
   }
 
-  logout(): { message: string } {
+  logout(user: UserDocument): { message: string } {
+    this.activityLogsService.recordFromUser(user, {
+      action: ACTIVITY_ACTION.AUTH_LOGOUT,
+      targetType: ACTIVITY_TARGET.USER,
+      targetId: user._id,
+    });
+
     return { message: 'Logged out successfully' };
   }
 

@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ActivityLogsModule } from '../activity-logs/activity-logs.module';
 import { DatabaseModule } from '../database/database.module';
 import { SettingsModule } from '../settings/settings.module';
 import { AdminChallengesController } from './admin-challenges.controller';
@@ -7,7 +8,7 @@ import { ChallengesCronService } from './challenges-cron.service';
 import { ChallengesService } from './challenges.service';
 
 @Module({
-  imports: [DatabaseModule, SettingsModule],
+  imports: [DatabaseModule, ActivityLogsModule, SettingsModule],
   controllers: [AdminChallengesController],
   providers: [ChallengesService, ChallengesCronService, ChallengeExportService],
   exports: [ChallengesService],

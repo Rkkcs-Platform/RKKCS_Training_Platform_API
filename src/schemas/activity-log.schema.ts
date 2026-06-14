@@ -23,6 +23,8 @@ export class ActivityLog {
 
   @Prop({ type: Object })
   metadata?: Record<string, unknown>;
+
+  createdAt?: Date;
 }
 
 export const ActivityLogSchema = SchemaFactory.createForClass(ActivityLog);

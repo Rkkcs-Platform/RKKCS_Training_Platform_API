@@ -25,8 +25,8 @@ async function bootstrap() {
   );
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Brain Training Platform API')
-    .setDescription('API documentation for Brain Training Platform')
+    .setTitle('RKKCS Operations Platform API')
+    .setDescription('API documentation for RKKCS Operations Platform')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
