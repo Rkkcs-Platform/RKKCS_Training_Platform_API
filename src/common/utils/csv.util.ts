@@ -1,3 +1,5 @@
+import { formatCodeForExport } from './code.util';
+
 export function escapeCsvValue(value: string | number): string {
   const stringValue = String(value);
 
@@ -32,7 +34,7 @@ export function buildChallengeCodesCsv(
   const sortedCodes = [...codes].sort((left, right) => left.order - right.order);
   const content = buildCsv(
     ['order', 'code'],
-    sortedCodes.map((item) => [item.order, item.code]),
+    sortedCodes.map((item) => [item.order, formatCodeForExport(item.code)]),
   );
 
   return {

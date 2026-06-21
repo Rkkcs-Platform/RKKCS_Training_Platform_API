@@ -5,6 +5,10 @@ export function normalizeCode(code: string): string {
   return code.trim().toUpperCase();
 }
 
+export function formatCodeForExport(code: string): string {
+  return normalizeCode(code).split('').join(' ');
+}
+
 export function generateRandomCode(length: number): string {
   let result = '';
 
