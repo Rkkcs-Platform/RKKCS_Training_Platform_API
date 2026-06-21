@@ -69,8 +69,9 @@ export class ChallengesService {
     }
 
     const settings = await this.settingsService.getSettingsForDate(date);
-    const codeCount = options.codeCount ?? settings.codeCount;
     const codeLength = options.codeLength ?? settings.codeLength;
+    const codeCount =
+      options.codeCount ?? this.settingsService.resolveCodeCount(settings);
     const codes = generateUniqueCodes(codeCount, codeLength);
     const generatedBy = options.generatedBy ?? GeneratedBy.ADMIN;
 

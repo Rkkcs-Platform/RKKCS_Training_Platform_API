@@ -74,6 +74,7 @@ export class SeedService implements OnModuleInit {
       codeCount: 20,
       codeLength: 8,
       generateTime: '03:00',
+      isAutoRandomCodeCount: false,
       isDefault: true,
     });
 

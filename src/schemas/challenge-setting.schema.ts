@@ -17,6 +17,9 @@ export class ChallengeSetting {
   @Prop({ required: true, trim: true })
   generateTime: string;
 
+  @Prop({ required: true, default: false})
+  isAutoRandomCodeCount: boolean;
+
   @Prop({ required: true, default: false })
   isDefault: boolean;
 
@@ -29,3 +32,4 @@ export const ChallengeSettingSchema =
 
 ChallengeSettingSchema.index({ date: 1 });
 ChallengeSettingSchema.index({ isDefault: 1 });
+ChallengeSettingSchema.index({ isAutoRandomCodeCount: 1 });
