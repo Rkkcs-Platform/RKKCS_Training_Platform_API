@@ -46,6 +46,11 @@ class EnvironmentVariables {
   @IsOptional()
   @IsString()
   ADMIN_NAME?: string;
+
+  /** japan | vietnam — mock shipment map region */
+  @IsOptional()
+  @IsString()
+  MOCK_MAP_REGION?: string;
 }
 
 export function validateEnv(config: Record<string, unknown>) {

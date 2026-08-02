@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -17,6 +18,10 @@ import { UserRole, UserStatus } from '../common/enums';
 import { User, UserDocument } from '../schemas/user.schema';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import {
+  ChangePasswordDto,
+  UpdateProfileDto,
+} from './dto/update-profile.dto';
 import { JwtPayload } from './types/jwt-payload.type';
 
 export interface AuthUserResponse {
@@ -27,6 +32,7 @@ export interface AuthUserResponse {
   role: UserRole;
   status: UserStatus;
   avatar?: string;
+  shopId?: string;
   createdAt?: Date;
 }
 
@@ -125,6 +131,55 @@ export class AuthService {
     return this.toUserResponse(user);
   }
 
+  async updateProfile(
+    user: UserDocument,
+    dto: UpdateProfileDto,
+  ): Promise<AuthUserResponse> {
+    const fresh = await this.userModel.findById(user._id).exec();
+    if (!fresh) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    if (dto.name !== undefined) {
+      fresh.name = dto.name.trim();
+    }
+    if (dto.avatar !== undefined) {
+      fresh.avatar = dto.avatar.trim() || undefined;
+    }
+
+    await fresh.save();
+    return this.toUserResponse(fresh);
+  }
+
+  async changePassword(
+    user: UserDocument,
+    dto: ChangePasswordDto,
+  ): Promise<{ message: string }> {
+    const fresh = await this.userModel
+      .findById(user._id)
+      .select('+passwordHash')
+      .exec();
+    if (!fresh) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const valid = await bcrypt.compare(dto.currentPassword, fresh.passwordHash);
+    if (!valid) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    if (dto.currentPassword === dto.newPassword) {
+      throw new BadRequestException(
+        'New password must be different from current password',
+      );
+    }
+
+    fresh.passwordHash = await bcrypt.hash(dto.newPassword, this.saltRounds);
+    await fresh.save();
+
+    return { message: 'Password changed successfully' };
+  }
+
   logout(user: UserDocument): { message: string } {
     this.activityLogsService.recordFromUser(user, {
       action: ACTIVITY_ACTION.AUTH_LOGOUT,
@@ -214,7 +269,8 @@ export class AuthService {
       status: user.status,
       avatar: user.avatar,
       createdAt: user.createdAt,
-      staffCode: user.staffCode || ''
+      staffCode: user.staffCode || '',
+      shopId: user.shopId?.toString(),
     };
   }
 }

@@ -30,6 +30,9 @@ export class UserSubmission {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   userId: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, ref: 'Shop', required: true })
+  shopId: Types.ObjectId;
+
   @Prop({ type: Types.ObjectId, ref: 'Challenge', required: true })
   challengeId: Types.ObjectId;
 
@@ -70,5 +73,6 @@ export const UserSubmissionSchema =
 
 UserSubmissionSchema.index({ userId: 1, date: 1 }, { unique: true });
 UserSubmissionSchema.index({ challengeId: 1 });
+UserSubmissionSchema.index({ shopId: 1 });
 UserSubmissionSchema.index({ status: 1 });
 UserSubmissionSchema.index({ date: 1 });

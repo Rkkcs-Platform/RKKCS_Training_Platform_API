@@ -10,8 +10,14 @@ import { validateEnv } from './config/env.validation';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health/health.controller';
 import { PingController } from './health/ping.controller';
+import { OrdersModule } from './orders/orders.module';
+import { ProcessingJobsModule } from './processing/processing.module';
+import { ReportsModule } from './reports/reports.module';
+import { CategoriesModule } from './categories/categories.module';
+import { NewsModule } from './news/news.module';
 import { SeedModule } from './seed/seed.module';
 import { SettingsModule } from './settings/settings.module';
+import { ShopsModule } from './shops/shops.module';
 import { SubmissionsModule } from './submissions/submissions.module';
 
 @Module({
@@ -32,10 +38,18 @@ import { SubmissionsModule } from './submissions/submissions.module';
     ActivityLogsModule,
     AuthModule,
     SettingsModule,
+    ShopsModule,
     ChallengesModule,
+    ProcessingJobsModule,
     SubmissionsModule,
+    OrdersModule,
+    CategoriesModule,
+    NewsModule,
+    ReportsModule,
     SeedModule,
   ],
   controllers: [HealthController, PingController],
 })
 export class AppModule {}
+
+

@@ -22,12 +22,14 @@ import {
 import { SubmissionHistoryQueryDto } from '../common/dto/pagination-query.dto';
 import { AdminSubmissionListQueryDto } from './dto/admin-submission-list-query.dto';
 import { ChallengesService } from '../challenges/challenges.service';
+import { ProcessingService } from '../processing/processing.service';
 import { ChallengeDocument } from '../schemas/challenge.schema';
 import {
   UserSubmission,
   UserSubmissionDocument,
 } from '../schemas/user-submission.schema';
 import { UserDocument } from '../schemas/user.schema';
+import { ShopsService } from '../shops/shops.service';
 
 @Injectable()
 export class SubmissionsService {
@@ -35,24 +37,26 @@ export class SubmissionsService {
     @InjectModel(UserSubmission.name)
     private readonly submissionModel: Model<UserSubmissionDocument>,
     private readonly challengesService: ChallengesService,
+    private readonly shopsService: ShopsService,
     private readonly activityLogsService: ActivityLogsService,
+    private readonly processingService: ProcessingService,
   ) {}
 
   async getTodayChallenge(user: UserDocument) {
-    const challenge = await this.getTodayChallengeDocument();
-    const submission = await this.getOrCreateSubmission(user._id, challenge);
+    const challenge = await this.getTodayChallengeDocument(user);
+    const submission = await this.getOrCreateSubmission(user, challenge);
 
     return this.toTodayProgress(challenge, submission);
   }
 
   async submitTodayCode(user: UserDocument, rawCode: string) {
-    const challenge = await this.getTodayChallengeDocument();
+    const challenge = await this.getTodayChallengeDocument(user);
     this.challengesService.assertChallengeActive(challenge);
 
-    const submission = await this.getOrCreateSubmission(user._id, challenge);
+    const submission = await this.getOrCreateSubmission(user, challenge);
 
     if (submission.status === SubmissionStatus.COMPLETED) {
-      throw new BadRequestException('Challenge already completed for today');
+      throw new BadRequestException('Today\'s batch is already completed');
     }
 
     if (submission.totalSubmitted >= challenge.totalCodes) {
@@ -96,11 +100,20 @@ export class SubmissionsService {
       targetId: submission._id,
       metadata: {
         date: challenge.date,
+        shopId: challenge.shopId?.toString(),
         order: submission.totalSubmitted,
         inputCode,
         isCorrect,
       },
     });
+
+    // Spec: 1 correct code → 1 order (create immediately, not only when batch completes).
+    // Also backfills earlier correct codes in the same submission that never got orders.
+    if (isCorrect) {
+      void this.processingService
+        .processSubmissionCorrectAnswers(submission._id)
+        .catch(() => undefined);
+    }
 
     if (completed) {
       this.activityLogsService.recordFromUser(user, {
@@ -109,12 +122,18 @@ export class SubmissionsService {
         targetId: submission._id,
         metadata: {
           date: challenge.date,
+          shopId: challenge.shopId?.toString(),
           submitted: submission.totalSubmitted,
           correct: submission.totalCorrect,
           wrong: submission.totalWrong,
           accuracy: submission.accuracy,
         },
       });
+
+      // Backfill any orders missed during per-code processing
+      void this.processingService
+        .processBatch(challenge._id.toString())
+        .catch(() => undefined);
     }
 
     return {
@@ -127,7 +146,7 @@ export class SubmissionsService {
   }
 
   async getTodayResult(user: UserDocument) {
-    const challenge = await this.getTodayChallengeDocument();
+    const challenge = await this.getTodayChallengeDocument(user);
     const submission = await this.submissionModel
       .findOne({
         userId: user._id,
@@ -179,7 +198,10 @@ export class SubmissionsService {
       throw new NotFoundException(`No submission found for ${date}`);
     }
 
-    const challenge = await this.challengesService.findByDate(date);
+    const shopId =
+      submission.shopId ??
+      (await this.shopsService.resolveShopIdForUser(user));
+    const challenge = await this.challengesService.findByDate(date, shopId);
 
     return this.toResultResponse(challenge, submission);
   }
@@ -263,25 +285,39 @@ export class SubmissionsService {
     };
   }
 
-  private async getTodayChallengeDocument(): Promise<ChallengeDocument> {
+  private async getTodayChallengeDocument(
+    user: UserDocument,
+  ): Promise<ChallengeDocument> {
     const date = getTodayDate();
-    return this.challengesService.ensureChallengeForDate(date);
+    const shopId = await this.shopsService.resolveShopIdForUser(user);
+    return this.challengesService.ensureChallengeForDate(date, shopId);
   }
 
   private async getOrCreateSubmission(
-    userId: Types.ObjectId,
+    user: UserDocument,
     challenge: ChallengeDocument,
   ): Promise<UserSubmissionDocument> {
     const existing = await this.submissionModel
-      .findOne({ userId, date: challenge.date })
+      .findOne({ userId: user._id, date: challenge.date })
       .exec();
 
     if (existing) {
+      // Align submission to the batch of the user's current shop
+      if (
+        existing.challengeId.toString() !== challenge._id.toString()
+        || !existing.shopId
+        || existing.shopId.toString() !== challenge.shopId.toString()
+      ) {
+        existing.challengeId = challenge._id;
+        existing.shopId = challenge.shopId;
+        await existing.save();
+      }
       return existing;
     }
 
     return this.submissionModel.create({
-      userId,
+      userId: user._id,
+      shopId: challenge.shopId,
       challengeId: challenge._id,
       date: challenge.date,
       answers: [],
@@ -315,6 +351,7 @@ export class SubmissionsService {
     return {
       id: submission._id.toString(),
       date: submission.date,
+      shopId: submission.shopId?.toString(),
       user: {
         id: user._id.toString(),
         name: user.name,
@@ -337,6 +374,7 @@ export class SubmissionsService {
     return {
       id: submission._id.toString(),
       date: submission.date,
+      shopId: submission.shopId?.toString(),
       user: {
         id: user._id.toString(),
         name: user.name,

@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 import { ChallengeStatus, GeneratedBy } from '../common/enums';
 
 export type ChallengeDocument = HydratedDocument<Challenge>;
@@ -17,6 +17,9 @@ export const ChallengeCodeSchema = SchemaFactory.createForClass(ChallengeCode);
 
 @Schema({ timestamps: true, collection: 'challenges' })
 export class Challenge {
+  @Prop({ type: Types.ObjectId, ref: 'Shop', required: true })
+  shopId: Types.ObjectId;
+
   @Prop({ required: true, trim: true })
   date: string;
 
@@ -41,5 +44,6 @@ export class Challenge {
 
 export const ChallengeSchema = SchemaFactory.createForClass(Challenge);
 
-ChallengeSchema.index({ date: 1 }, { unique: true });
+ChallengeSchema.index({ shopId: 1, date: 1 }, { unique: true });
+ChallengeSchema.index({ date: 1 });
 ChallengeSchema.index({ status: 1 });

@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsInt,
+  IsMongoId,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -18,6 +19,14 @@ export class GenerateChallengeDto {
     message: 'date must be in YYYY-MM-DD format',
   })
   date: string;
+
+  @ApiPropertyOptional({
+    example: '665f1a2b3c4d5e6f7a8b9c0d',
+    description: 'Optional shop ID. Defaults to DEFAULT shop.',
+  })
+  @IsOptional()
+  @IsMongoId()
+  shopId?: string;
 
   @ApiPropertyOptional({ example: 20 })
   @IsOptional()

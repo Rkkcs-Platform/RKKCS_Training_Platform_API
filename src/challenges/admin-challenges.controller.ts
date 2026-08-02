@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiProduces, ApiTags } from '@nestjs/swagger';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
 import {
@@ -33,6 +33,7 @@ export class AdminChallengesController {
     const challenge = await this.challengesService.generateChallenge(dto.date, {
       codeCount: dto.codeCount,
       codeLength: dto.codeLength,
+      shopId: dto.shopId,
     });
 
     this.activityLogsService.recordFromUser(admin, {
@@ -41,12 +42,13 @@ export class AdminChallengesController {
       targetId: challenge._id,
       metadata: {
         date: challenge.date,
+        shopId: challenge.shopId?.toString(),
         totalCodes: challenge.totalCodes,
         codeLength: challenge.codeLength,
       },
     });
 
-    return this.challengesService.toAdminDetail(challenge);
+    return this.challengesService.toAdminDetailWithShop(challenge);
   }
 
   @Get('date/:date/codes/export')
@@ -55,26 +57,30 @@ export class AdminChallengesController {
   exportByDate(
     @CurrentUser() admin: UserDocument,
     @Param('date') date: string,
+    @Query('shopId') shopId?: string,
   ) {
     this.activityLogsService.recordFromUser(admin, {
       action: ACTIVITY_ACTION.CHALLENGE_EXPORT,
       targetType: ACTIVITY_TARGET.CHALLENGE,
-      metadata: { date, exportBy: 'date' },
+      metadata: { date, shopId, exportBy: 'date' },
     });
 
-    return this.challengeExportService.exportByDate(date);
+    return this.challengeExportService.exportByDate(date, shopId);
   }
 
   @Get('date/:date')
-  @ApiOperation({ summary: 'Get challenge by date' })
-  async getByDate(@Param('date') date: string) {
-    const challenge = await this.challengesService.findByDate(date);
+  @ApiOperation({ summary: 'Get challenge by date (pass shopId for multi-shop)' })
+  async getByDate(
+    @Param('date') date: string,
+    @Query('shopId') shopId?: string,
+  ) {
+    const challenge = await this.challengesService.findByDate(date, shopId);
 
     if (!challenge) {
-      return { date, exists: false };
+      return { date, shopId, exists: false };
     }
 
-    return this.challengesService.toAdminDetail(challenge);
+    return this.challengesService.toAdminDetailWithShop(challenge);
   }
 
   @Get(':challengeId/codes/export')
@@ -98,7 +104,7 @@ export class AdminChallengesController {
   @ApiOperation({ summary: 'Get challenge detail' })
   async getById(@Param('challengeId') challengeId: string) {
     const challenge = await this.challengesService.findById(challengeId);
-    return this.challengesService.toAdminDetail(challenge);
+    return this.challengesService.toAdminDetailWithShop(challenge);
   }
 
   @Post(':challengeId/regenerate')
@@ -120,6 +126,42 @@ export class AdminChallengesController {
       },
     });
 
-    return this.challengesService.toAdminDetail(challenge);
+    return this.challengesService.toAdminDetailWithShop(challenge);
+  }
+
+  @Post(':challengeId/lock')
+  @ApiOperation({ summary: 'Lock daily batch — users cannot upload codes' })
+  async lock(
+    @CurrentUser() admin: UserDocument,
+    @Param('challengeId') challengeId: string,
+  ) {
+    const challenge = await this.challengesService.lockChallenge(challengeId);
+
+    this.activityLogsService.recordFromUser(admin, {
+      action: ACTIVITY_ACTION.CHALLENGE_LOCK,
+      targetType: ACTIVITY_TARGET.CHALLENGE,
+      targetId: challenge._id,
+      metadata: { date: challenge.date },
+    });
+
+    return this.challengesService.toAdminDetailWithShop(challenge);
+  }
+
+  @Post(':challengeId/unlock')
+  @ApiOperation({ summary: 'Unlock daily batch — users can upload codes again' })
+  async unlock(
+    @CurrentUser() admin: UserDocument,
+    @Param('challengeId') challengeId: string,
+  ) {
+    const challenge = await this.challengesService.unlockChallenge(challengeId);
+
+    this.activityLogsService.recordFromUser(admin, {
+      action: ACTIVITY_ACTION.CHALLENGE_UNLOCK,
+      targetType: ACTIVITY_TARGET.CHALLENGE,
+      targetId: challenge._id,
+      metadata: { date: challenge.date },
+    });
+
+    return this.challengesService.toAdminDetailWithShop(challenge);
   }
 }
