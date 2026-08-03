@@ -28,6 +28,15 @@ export class OrdersController {
     return this.ordersService.getShopOwnerOrders(user, query);
   }
 
+  @Get('by-code/:code')
+  @ApiOperation({ summary: 'Get order by transaction code' })
+  findByCode(
+    @CurrentUser() user: UserDocument,
+    @Param('code') code: string,
+  ) {
+    return this.ordersService.getShopOwnerOrderByTransactionCode(user, code);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get order detail for current shop' })
   findOne(@CurrentUser() user: UserDocument, @Param('id') id: string) {

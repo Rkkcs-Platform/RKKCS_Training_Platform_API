@@ -1,6 +1,8 @@
 import { Body, Controller, Get, Patch } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { Locale } from '../common/decorators/locale.decorator';
+import type { ApiLocale } from '../common/utils/i18n.util';
 import type { UserDocument } from '../schemas/user.schema';
 import { AuthService } from './auth.service';
 import {
@@ -25,8 +27,9 @@ export class ProfileController {
   updateProfile(
     @CurrentUser() user: UserDocument,
     @Body() dto: UpdateProfileDto,
+    @Locale() locale: ApiLocale,
   ) {
-    return this.authService.updateProfile(user, dto);
+    return this.authService.updateProfile(user, dto, locale);
   }
 
   @Patch('change-password')
@@ -34,7 +37,8 @@ export class ProfileController {
   changePassword(
     @CurrentUser() user: UserDocument,
     @Body() dto: ChangePasswordDto,
+    @Locale() locale: ApiLocale,
   ) {
-    return this.authService.changePassword(user, dto);
+    return this.authService.changePassword(user, dto, locale);
   }
 }

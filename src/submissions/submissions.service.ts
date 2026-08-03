@@ -18,6 +18,8 @@ import {
   isValidDateString,
   normalizeCode,
   parsePagination,
+  t,
+  type ApiLocale,
 } from '../common/utils';
 import { SubmissionHistoryQueryDto } from '../common/dto/pagination-query.dto';
 import { AdminSubmissionListQueryDto } from './dto/admin-submission-list-query.dto';
@@ -49,18 +51,18 @@ export class SubmissionsService {
     return this.toTodayProgress(challenge, submission);
   }
 
-  async submitTodayCode(user: UserDocument, rawCode: string) {
+  async submitTodayCode(user: UserDocument, rawCode: string, locale: ApiLocale = 'en') {
     const challenge = await this.getTodayChallengeDocument(user);
     this.challengesService.assertChallengeActive(challenge);
 
     const submission = await this.getOrCreateSubmission(user, challenge);
 
     if (submission.status === SubmissionStatus.COMPLETED) {
-      throw new BadRequestException('Today\'s batch is already completed');
+      throw new BadRequestException(t('submission.batch_completed', locale));
     }
 
     if (submission.totalSubmitted >= challenge.totalCodes) {
-      throw new BadRequestException('All codes have already been submitted');
+      throw new BadRequestException(t('submission.all_codes_submitted', locale));
     }
 
     const inputCode = normalizeCode(rawCode);
@@ -145,7 +147,7 @@ export class SubmissionsService {
     };
   }
 
-  async getTodayResult(user: UserDocument) {
+  async getTodayResult(user: UserDocument, locale: ApiLocale = 'en') {
     const challenge = await this.getTodayChallengeDocument(user);
     const submission = await this.submissionModel
       .findOne({
@@ -155,7 +157,7 @@ export class SubmissionsService {
       .exec();
 
     if (!submission) {
-      throw new NotFoundException('No submission found for today');
+      throw new NotFoundException(t('submission.not_found_today', locale));
     }
 
     return this.toResultResponse(challenge, submission);
@@ -185,9 +187,9 @@ export class SubmissionsService {
     };
   }
 
-  async getSubmissionByDate(user: UserDocument, date: string) {
+  async getSubmissionByDate(user: UserDocument, date: string, locale: ApiLocale = 'en') {
     if (!isValidDateString(date)) {
-      throw new BadRequestException('Invalid date format. Use YYYY-MM-DD');
+      throw new BadRequestException(t('common.invalid_date', locale));
     }
 
     const submission = await this.submissionModel
@@ -195,7 +197,7 @@ export class SubmissionsService {
       .exec();
 
     if (!submission) {
-      throw new NotFoundException(`No submission found for ${date}`);
+      throw new NotFoundException(t('submission.not_found', locale));
     }
 
     const shopId =
@@ -206,9 +208,9 @@ export class SubmissionsService {
     return this.toResultResponse(challenge, submission);
   }
 
-  async getAdminSubmissions(query: AdminSubmissionListQueryDto) {
+  async getAdminSubmissions(query: AdminSubmissionListQueryDto, locale: ApiLocale = 'en') {
     if (query.date && !isValidDateString(query.date)) {
-      throw new BadRequestException('Invalid date format. Use YYYY-MM-DD');
+      throw new BadRequestException(t('common.invalid_date', locale));
     }
 
     const { page, limit, skip } = parsePagination(query.page, query.limit);
@@ -239,9 +241,9 @@ export class SubmissionsService {
     };
   }
 
-  async getAdminSubmissionById(submissionId: string) {
+  async getAdminSubmissionById(submissionId: string, locale: ApiLocale = 'en') {
     if (!Types.ObjectId.isValid(submissionId)) {
-      throw new BadRequestException('Invalid submission ID');
+      throw new BadRequestException(t('submission.invalid_id', locale));
     }
 
     const submission = await this.submissionModel
@@ -250,7 +252,7 @@ export class SubmissionsService {
       .exec();
 
     if (!submission) {
-      throw new NotFoundException('Submission not found');
+      throw new NotFoundException(t('submission.not_found', locale));
     }
 
     return this.toAdminDetail(submission);

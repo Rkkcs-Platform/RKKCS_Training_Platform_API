@@ -113,16 +113,16 @@ export function buildMapFromCityIds(params: {
     findMockCity(params.destCityId) ??
     pickCity(params.seed + '-dest', region);
 
-  let current = toPoint(origin, `Vị trí hiện tại — ${origin.name} (mock)`);
+  let current = toPoint(origin, origin.name);
 
   if (params.status === 'delivered') {
-    current = toPoint(destination, `Đã giao — ${destination.name} (mock)`);
+    current = toPoint(destination, destination.name);
   } else if (params.status === 'in_transit') {
     const t = 0.4 + (hashCode(params.seed) % 30) / 100;
     current = {
       lat: lerp(origin.lat, destination.lat, t),
       lng: lerp(origin.lng, destination.lng, t),
-      label: `Đang vận chuyển ${origin.name} → ${destination.name} (mock)`,
+      label: `${origin.name} → ${destination.name}`,
       city: `${origin.name}→${destination.name}`,
       cityId: origin.id,
     };
@@ -140,15 +140,15 @@ export function buildMapFromCityIds(params: {
     currentCity: origin.name,
     destLat: destination.lat,
     destLng: destination.lng,
-    destLabel: `Điểm giao hàng — ${destination.name} (mock)`,
+    destLabel: destination.name,
     destCity: destination.name,
-    deliveryAddressText: `${destination.name}, ${country} (mock)`,
+    deliveryAddressText: `${destination.name}, ${country}`,
     currentLocationText:
       params.status === 'delivered'
-        ? `Đã tới ${destination.name} (mock)`
+        ? destination.name
         : params.status === 'in_transit'
-          ? `Đang trên đường ${origin.name} → ${destination.name} (mock)`
-          : `${origin.name} (mock)`,
+          ? `${origin.name} → ${destination.name}`
+          : origin.name,
     isMock: true as const,
   };
 }

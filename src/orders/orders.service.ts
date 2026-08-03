@@ -114,6 +114,23 @@ export class OrdersService {
     return this.toDetail(order);
   }
 
+  async getShopOwnerOrderByTransactionCode(
+    user: UserDocument,
+    code: string,
+  ) {
+    const shopId = await this.shopsService.resolveShopIdForUser(user);
+    const order = await this.orderModel
+      .findOne({ shopId, transactionCode: code.toUpperCase() })
+      .populate('customerId', 'customerCode fullName phone email totalSpent')
+      .exec();
+
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+
+    return this.toDetail(order);
+  }
+
   async updateShopOwnerOrder(
     user: UserDocument,
     orderId: string,
@@ -326,10 +343,10 @@ export class OrdersService {
           note:
             dto.shipment.note?.trim() ||
             (isNewShipment
-              ? 'Vận đơn được tạo'
+              ? 'Shipment created'
               : statusChanged
                 ? this.defaultNoteForStatus(shipment.status)
-                : 'Cập nhật vị trí vận chuyển'),
+                : 'Shipping location updated'),
         });
       } else {
         await this.ensureShipmentEvents(shipment);
@@ -860,7 +877,7 @@ export class OrdersService {
       shipmentId: shipment._id,
       status: ShipmentStatus.PENDING,
       location: shipment.currentLocation || 'Warehouse',
-      note: 'Vận đơn được tạo',
+      note: 'Shipment created',
     });
 
     if (
@@ -967,13 +984,13 @@ export class OrdersService {
       current: {
         lat: shipment.currentLat,
         lng: shipment.currentLng,
-        label: shipment.currentLocation || 'Vị trí hiện tại (mock)',
+        label: shipment.currentLocation || 'Current location',
         cityId: shipment.currentCityId,
       },
       destination: {
         lat: shipment.destLat,
         lng: shipment.destLng,
-        label: shipment.deliveryAddress || 'Điểm giao hàng (mock)',
+        label: shipment.deliveryAddress || 'Delivery destination',
         cityId: shipment.destCityId,
       },
       currentCityId: shipment.currentCityId,
@@ -985,21 +1002,21 @@ export class OrdersService {
   private defaultNoteForStatus(status: ShipmentStatus) {
     switch (status) {
       case ShipmentStatus.PENDING:
-        return 'Đơn đang chờ lấy hàng';
+        return 'Pending pickup';
       case ShipmentStatus.IN_TRANSIT:
-        return 'Đơn đang trên đường vận chuyển';
+        return 'In transit';
       case ShipmentStatus.DELIVERED:
-        return 'Giao hàng thành công';
+        return 'Delivered successfully';
       default:
-        return 'Cập nhật trạng thái vận chuyển';
+        return 'Shipping status updated';
     }
   }
 
   private buildShipmentTimeline(status: string) {
     const steps = [
-      { key: 'pending', label: 'Chờ lấy hàng / tạo vận đơn' },
-      { key: 'in_transit', label: 'Đang vận chuyển' },
-      { key: 'delivered', label: 'Giao hàng thành công' },
+      { key: 'pending', label: 'Pending Pickup' },
+      { key: 'in_transit', label: 'In Transit' },
+      { key: 'delivered', label: 'Delivered' },
     ];
 
     const index = steps.findIndex((step) => step.key === status);

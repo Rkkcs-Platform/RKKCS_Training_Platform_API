@@ -76,4 +76,19 @@ export class SettingsService {
 
     return settings.codeCount;
   }
+
+  async getMaintenanceStatus(): Promise<{ maintenance: boolean }> {
+    const setting = await this.challengeSettingModel
+      .findOne({ isDefault: true })
+      .exec();
+    return { maintenance: setting?.maintenanceMode ?? false };
+  }
+
+  async setMaintenanceMode(enabled: boolean): Promise<{ maintenance: boolean }> {
+    await this.challengeSettingModel.updateOne(
+      { isDefault: true },
+      { $set: { maintenanceMode: enabled } },
+    );
+    return { maintenance: enabled };
+  }
 }
