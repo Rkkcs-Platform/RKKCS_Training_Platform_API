@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Post } from '@nestjs/common';
+import { Public } from '../common/decorators/public.decorator';
 import { SettingsService } from './settings.service';
 import { UpdateChallengeSettingDto } from './dto/setting-challenge.dto';
 
@@ -13,5 +14,11 @@ export class SettingChallengeController {
   @Post('update')
   updateSettingChallenge(@Body() setting: UpdateChallengeSettingDto) {
     return this.settingService.updateSettingChallenge(setting);
+  }
+
+  @Public()
+  @Get('maintenance')
+  getMaintenanceStatus() {
+    return this.settingService.getMaintenanceStatus();
   }
 }

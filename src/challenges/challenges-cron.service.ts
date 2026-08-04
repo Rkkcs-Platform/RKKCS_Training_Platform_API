@@ -24,29 +24,27 @@ export class ChallengesCronService {
     const date = getTodayDate();
 
     try {
-      const existing = await this.challengesService.findByDate(date);
-      const challenge =
-        await this.challengesService.ensureChallengeForDate(date);
+      const result =
+        await this.challengesService.ensureChallengesForActiveShops(date);
 
       this.activityLogsService.record({
         action: ACTIVITY_ACTION.CHALLENGE_DAILY_CRON,
         actorRole: ActorRole.SYSTEM,
         targetType: ACTIVITY_TARGET.CHALLENGE,
-        targetId: challenge._id,
         metadata: {
           date,
-          totalCodes: challenge.totalCodes,
-          created: !existing,
+          shopsProcessed: result.total,
+          created: result.created,
         },
       });
 
       this.logger.log(
-        `Daily challenge ready for ${date} (${challenge.totalCodes} codes)`,
+        `Daily batches ready for ${date}: ${result.total} shops (${result.created} created)`,
       );
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unknown cron error';
-      this.logger.error(`Failed to generate challenge for ${date}: ${message}`);
+      this.logger.error(`Failed to generate challenges for ${date}: ${message}`);
     }
   }
 }

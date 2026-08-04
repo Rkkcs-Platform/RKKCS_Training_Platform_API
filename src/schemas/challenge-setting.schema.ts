@@ -23,6 +23,9 @@ export class ChallengeSetting {
   @Prop({ required: true, default: false })
   isDefault: boolean;
 
+  @Prop({ default: false })
+  maintenanceMode: boolean;
+
   @Prop({ type: Types.ObjectId, ref: 'User' })
   createdBy?: Types.ObjectId;
 }

@@ -15,3 +15,8 @@ export class UpdateChallengeSettingDto {
   @IsBoolean()
   isAutoRandomCodeCount: boolean;
 }
+
+export class ToggleMaintenanceDto {
+  @IsBoolean()
+  enabled: boolean;
+}

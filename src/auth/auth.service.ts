@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -14,9 +15,14 @@ import {
 } from '../common/constants/activity-action.constant';
 import { ACTIVITY_TARGET } from '../common/constants/activity-target.constant';
 import { UserRole, UserStatus } from '../common/enums';
+import { t, type ApiLocale } from '../common/utils/i18n.util';
 import { User, UserDocument } from '../schemas/user.schema';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import {
+  ChangePasswordDto,
+  UpdateProfileDto,
+} from './dto/update-profile.dto';
 import { JwtPayload } from './types/jwt-payload.type';
 
 export interface AuthUserResponse {
@@ -27,6 +33,7 @@ export interface AuthUserResponse {
   role: UserRole;
   status: UserStatus;
   avatar?: string;
+  shopId?: string;
   createdAt?: Date;
 }
 
@@ -52,18 +59,18 @@ export class AuthService {
     private readonly activityLogsService: ActivityLogsService,
   ) {}
 
-  async register(dto: RegisterDto): Promise<AuthResponse> {
+  async register(dto: RegisterDto, locale: ApiLocale = 'en'): Promise<AuthResponse> {
     const email = dto.email.toLowerCase().trim();
     const existingUser = await this.userModel.findOne({ email }).exec();
 
     if (existingUser) {
-      throw new ConflictException('Email already registered');
+      throw new ConflictException(t('auth.email_already_registered', locale));
     }
 
     if (dto.staffCode) {
       const existingStaffCode = await this.userModel.findOne({ staffCode: dto.staffCode}).exec();
       if (existingStaffCode) {
-        throw new ConflictException('Staff code already registered');
+        throw new ConflictException(t('auth.staff_code_already_registered', locale));
       }
     }
 
@@ -87,7 +94,7 @@ export class AuthService {
     return this.buildAuthResponse(user);
   }
 
-  async login(dto: LoginDto): Promise<AuthResponse> {
+  async login(dto: LoginDto, locale: ApiLocale = 'en'): Promise<AuthResponse> {
     const email = dto.email.toLowerCase().trim();
     const user = await this.userModel
       .findOne({ email })
@@ -95,11 +102,11 @@ export class AuthService {
       .exec();
 
     if (!user) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException(t('auth.invalid_credentials', locale));
     }
 
     if (user.status !== UserStatus.ACTIVE) {
-      throw new UnauthorizedException('Account is inactive');
+      throw new UnauthorizedException(t('auth.account_inactive', locale));
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -108,7 +115,7 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid email or password');
+      throw new UnauthorizedException(t('auth.invalid_credentials', locale));
     }
 
     this.activityLogsService.recordFromUser(user, {
@@ -125,35 +132,86 @@ export class AuthService {
     return this.toUserResponse(user);
   }
 
-  logout(user: UserDocument): { message: string } {
+  async updateProfile(
+    user: UserDocument,
+    dto: UpdateProfileDto,
+    locale: ApiLocale = 'en',
+  ): Promise<AuthUserResponse> {
+    const fresh = await this.userModel.findById(user._id).exec();
+    if (!fresh) {
+      throw new UnauthorizedException(t('auth.user_not_found', locale));
+    }
+
+    if (dto.name !== undefined) {
+      fresh.name = dto.name.trim();
+    }
+    if (dto.avatar !== undefined) {
+      fresh.avatar = dto.avatar.trim() || undefined;
+    }
+
+    await fresh.save();
+    return this.toUserResponse(fresh);
+  }
+
+  async changePassword(
+    user: UserDocument,
+    dto: ChangePasswordDto,
+    locale: ApiLocale = 'en',
+  ): Promise<{ message: string }> {
+    const fresh = await this.userModel
+      .findById(user._id)
+      .select('+passwordHash')
+      .exec();
+    if (!fresh) {
+      throw new UnauthorizedException(t('auth.user_not_found', locale));
+    }
+
+    const valid = await bcrypt.compare(dto.currentPassword, fresh.passwordHash);
+    if (!valid) {
+      throw new BadRequestException(t('auth.current_password_incorrect', locale));
+    }
+
+    if (dto.currentPassword === dto.newPassword) {
+      throw new BadRequestException(
+        t('auth.new_password_same', locale),
+      );
+    }
+
+    fresh.passwordHash = await bcrypt.hash(dto.newPassword, this.saltRounds);
+    await fresh.save();
+
+    return { message: t('auth.password_changed', locale) };
+  }
+
+  logout(user: UserDocument, locale: ApiLocale = 'en'): { message: string } {
     this.activityLogsService.recordFromUser(user, {
       action: ACTIVITY_ACTION.AUTH_LOGOUT,
       targetType: ACTIVITY_TARGET.USER,
       targetId: user._id,
     });
 
-    return { message: 'Logged out successfully' };
+    return { message: t('auth.logged_out', locale) };
   }
 
-  async refreshTokens(refreshToken: string): Promise<RefreshTokenResponse> {
+  async refreshTokens(refreshToken: string, locale: ApiLocale = 'en'): Promise<RefreshTokenResponse> {
     try {
       const payload = this.jwtService.verify<JwtPayload>(refreshToken, {
         secret: this.getRefreshSecret(),
       });
 
       if (payload.type !== 'refresh') {
-        throw new UnauthorizedException('Invalid refresh token');
+        throw new UnauthorizedException(t('auth.invalid_refresh_token', locale));
       }
 
       const user = await this.userModel.findById(payload.sub).exec();
 
       if (!user || user.status !== UserStatus.ACTIVE) {
-        throw new UnauthorizedException('Invalid or inactive account');
+        throw new UnauthorizedException(t('auth.invalid_or_inactive', locale));
       }
 
       return this.buildTokenPair(user);
     } catch {
-      throw new UnauthorizedException('Invalid or expired refresh token');
+      throw new UnauthorizedException(t('auth.invalid_refresh_token', locale));
     }
   }
 
@@ -214,7 +272,8 @@ export class AuthService {
       status: user.status,
       avatar: user.avatar,
       createdAt: user.createdAt,
-      staffCode: user.staffCode || ''
+      staffCode: user.staffCode || '',
+      shopId: user.shopId?.toString(),
     };
   }
 }

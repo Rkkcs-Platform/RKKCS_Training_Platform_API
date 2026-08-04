@@ -10,11 +10,11 @@ import { ChallengesService } from './challenges.service';
 export class ChallengeExportService {
   constructor(private readonly challengesService: ChallengesService) {}
 
-  async exportByDate(date: string): Promise<StreamableFile> {
-    const challenge = await this.challengesService.findByDate(date);
+  async exportByDate(date: string, shopId?: string): Promise<StreamableFile> {
+    const challenge = await this.challengesService.findByDate(date, shopId);
 
     if (!challenge) {
-      throw new NotFoundException(`No challenge found for date ${date}`);
+      throw new NotFoundException(`No batch found for date ${date}`);
     }
 
     return this.toStreamableFile(challenge.date, challenge.codes);

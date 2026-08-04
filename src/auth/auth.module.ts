@@ -6,6 +6,7 @@ import { ActivityLogsModule } from '../activity-logs/activity-logs.module';
 import { DatabaseModule } from '../database/database.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { ProfileController } from './profile.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
@@ -25,7 +26,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       },
     }),
   ],
-  controllers: [AuthController],
+  controllers: [AuthController, ProfileController],
   providers: [AuthService, JwtStrategy],
   exports: [AuthService, JwtModule],
 })
