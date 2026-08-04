@@ -276,26 +276,34 @@ const translations: Record<string, Record<ApiLocale, string>> = {
   },
 };
 
+export let defaultAppLanguage: ApiLocale = 'vi';
+
+export function setDefaultAppLanguage(locale: ApiLocale) {
+  defaultAppLanguage = locale;
+}
+
 /**
  * Parse `Accept-Language` header to determine locale.
- * Returns 'en' (default) if no match found.
+ * Returns defaultAppLanguage if no match found.
  */
 export function parseLocale(acceptLanguage?: string): ApiLocale {
-  if (!acceptLanguage) return 'en';
+  if (!acceptLanguage) return defaultAppLanguage;
   const lower = acceptLanguage.toLowerCase();
   if (lower.startsWith('vi')) return 'vi';
   if (lower.startsWith('ja')) return 'ja';
-  return 'en';
+  if (lower.startsWith('en')) return 'en';
+  return defaultAppLanguage;
 }
 
 /**
  * Get a translated message by key + locale.
- * Falls back to English, then to the key itself.
+ * Falls back to defaultAppLanguage, then to English, then to the key itself.
  */
-export function t(key: string, locale: ApiLocale = 'en'): string {
+export function t(key: string, locale?: ApiLocale): string {
   const entry = translations[key];
   if (!entry) return key;
-  return entry[locale] ?? entry['en'] ?? key;
+  const resolvedLocale = locale ?? defaultAppLanguage;
+  return entry[resolvedLocale] ?? entry['en'] ?? key;
 }
 
 /**

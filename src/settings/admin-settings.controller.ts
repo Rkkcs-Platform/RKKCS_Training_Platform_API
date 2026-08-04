@@ -2,7 +2,7 @@ import { Body, Controller, Get, Patch } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '../common/enums';
-import { UpdateChallengeSettingDto, ToggleMaintenanceDto } from './dto/setting-challenge.dto';
+import { UpdateChallengeSettingDto, ToggleMaintenanceDto, SetLanguageDto } from './dto/setting-challenge.dto';
 import { SettingsService } from './settings.service';
 
 @ApiTags('Admin - Settings')
@@ -34,5 +34,11 @@ export class AdminSettingsController {
   @ApiOperation({ summary: 'Toggle maintenance mode' })
   setMaintenanceMode(@Body() body: ToggleMaintenanceDto) {
     return this.settingService.setMaintenanceMode(body.enabled);
+  }
+
+  @Patch('language')
+  @ApiOperation({ summary: 'Set default application language' })
+  setLanguage(@Body() body: SetLanguageDto) {
+    return this.settingService.setLanguage(body.language);
   }
 }

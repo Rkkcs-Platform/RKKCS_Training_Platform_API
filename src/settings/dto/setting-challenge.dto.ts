@@ -1,4 +1,4 @@
-import { IsBoolean, IsNumber, IsString, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsNumber, IsString, Min } from 'class-validator';
 
 export class UpdateChallengeSettingDto {
   @IsNumber()
@@ -19,4 +19,10 @@ export class UpdateChallengeSettingDto {
 export class ToggleMaintenanceDto {
   @IsBoolean()
   enabled: boolean;
+}
+
+export class SetLanguageDto {
+  @IsString()
+  @IsIn(['vi', 'en', 'ja'])
+  language: string;
 }

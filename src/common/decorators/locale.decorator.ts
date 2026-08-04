@@ -1,5 +1,5 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import type { ApiLocale } from '../utils/i18n.util';
+import { type ApiLocale, defaultAppLanguage } from '../utils/i18n.util';
 
 /**
  * Controller parameter decorator to extract the parsed locale from the request.
@@ -13,6 +13,6 @@ import type { ApiLocale } from '../utils/i18n.util';
 export const Locale = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): ApiLocale => {
     const request = ctx.switchToHttp().getRequest();
-    return request.locale ?? 'en';
+    return request.locale ?? defaultAppLanguage;
   },
 );
