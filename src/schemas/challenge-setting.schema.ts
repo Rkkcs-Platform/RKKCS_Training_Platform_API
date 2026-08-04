@@ -26,6 +26,9 @@ export class ChallengeSetting {
   @Prop({ default: false })
   maintenanceMode: boolean;
 
+  @Prop({ default: 'vi' })
+  language: string;
+
   @Prop({ type: Types.ObjectId, ref: 'User' })
   createdBy?: Types.ObjectId;
 }

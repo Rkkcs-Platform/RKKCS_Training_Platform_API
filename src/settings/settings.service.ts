@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { randomInt } from 'crypto';
 import { Model } from 'mongoose';
@@ -10,6 +10,8 @@ import {
   ChallengeSetting,
   ChallengeSettingDocument,
 } from '../schemas/challenge-setting.schema';
+import { ApiLocale, setDefaultAppLanguage } from '../common/utils/i18n.util';
+
 export interface ChallengeGenerationSettings {
   codeCount: number;
   codeLength: number;
@@ -18,11 +20,24 @@ export interface ChallengeGenerationSettings {
 }
 
 @Injectable()
-export class SettingsService {
+export class SettingsService implements OnModuleInit {
   constructor(
     @InjectModel(ChallengeSetting.name)
     private readonly challengeSettingModel: Model<ChallengeSettingDocument>,
   ) {}
+
+  async onModuleInit() {
+    try {
+      const setting = await this.challengeSettingModel
+        .findOne({ isDefault: true })
+        .exec();
+      if (setting && setting.language) {
+        setDefaultAppLanguage(setting.language as ApiLocale);
+      }
+    } catch (err) {
+      // Ignore database connection issues during seeding / setup
+    }
+  }
 
   async getSettingsForDate(date: string): Promise<ChallengeGenerationSettings> {
     const dailySetting = await this.challengeSettingModel
@@ -77,11 +92,14 @@ export class SettingsService {
     return settings.codeCount;
   }
 
-  async getMaintenanceStatus(): Promise<{ maintenance: boolean }> {
+  async getMaintenanceStatus(): Promise<{ maintenance: boolean; language: string }> {
     const setting = await this.challengeSettingModel
       .findOne({ isDefault: true })
       .exec();
-    return { maintenance: setting?.maintenanceMode ?? false };
+    return {
+      maintenance: setting?.maintenanceMode ?? false,
+      language: setting?.language ?? 'vi',
+    };
   }
 
   async setMaintenanceMode(enabled: boolean): Promise<{ maintenance: boolean }> {
@@ -90,5 +108,14 @@ export class SettingsService {
       { $set: { maintenanceMode: enabled } },
     );
     return { maintenance: enabled };
+  }
+
+  async setLanguage(language: string): Promise<{ language: string }> {
+    await this.challengeSettingModel.updateOne(
+      { isDefault: true },
+      { $set: { language } },
+    );
+    setDefaultAppLanguage(language as ApiLocale);
+    return { language };
   }
 }
