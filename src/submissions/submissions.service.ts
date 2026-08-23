@@ -140,10 +140,87 @@ export class SubmissionsService {
 
     return {
       isCorrect,
+      order: submission.totalSubmitted,
       submitted: submission.totalSubmitted,
       correct: submission.totalCorrect,
       wrong: submission.totalWrong,
       completed,
+    };
+  }
+
+  async resubmitCode(
+    user: UserDocument,
+    order: number,
+    rawCode: string,
+    locale: ApiLocale = 'en',
+  ) {
+    const challenge = await this.getTodayChallengeDocument(user);
+    const submission = await this.getOrCreateSubmission(user, challenge);
+
+    const answerIndex = submission.answers.findIndex((a) => a.order === order);
+    if (answerIndex === -1) {
+      throw new NotFoundException(t('submission.answer_not_found', locale));
+    }
+
+    const answer = submission.answers[answerIndex];
+    if (answer.isCorrect) {
+      throw new BadRequestException(
+        t('submission.answer_already_correct', locale),
+      );
+    }
+
+    const inputCode = normalizeCode(rawCode);
+    const { isCorrect, matchedCode } = this.challengesService.matchCode(
+      challenge,
+      inputCode,
+    );
+
+    // Replace the answer in-place
+    answer.inputCode = inputCode;
+    answer.matchedCode = isCorrect ? matchedCode : undefined;
+    answer.isCorrect = isCorrect;
+    answer.submittedAt = new Date();
+
+    if (isCorrect) {
+      submission.totalCorrect += 1;
+      submission.totalWrong -= 1;
+      submission.accuracy = calculateAccuracy(
+        submission.totalCorrect,
+        submission.totalSubmitted,
+      );
+    }
+
+    // Mark the answers array as modified so Mongoose persists subdoc changes
+    submission.markModified('answers');
+    await submission.save();
+
+    this.activityLogsService.recordFromUser(user, {
+      action: ACTIVITY_ACTION.CODE_SUBMIT,
+      targetType: ACTIVITY_TARGET.SUBMISSION,
+      targetId: submission._id,
+      metadata: {
+        date: challenge.date,
+        shopId: challenge.shopId?.toString(),
+        order,
+        inputCode,
+        isCorrect,
+        resubmit: true,
+      },
+    });
+
+    if (isCorrect) {
+      void this.processingService
+        .processSubmissionCorrectAnswers(submission._id)
+        .catch(() => undefined);
+    }
+
+    return {
+      isCorrect,
+      order,
+      submitted: submission.totalSubmitted,
+      correct: submission.totalCorrect,
+      wrong: submission.totalWrong,
+      completed: submission.status === SubmissionStatus.COMPLETED,
     };
   }
 

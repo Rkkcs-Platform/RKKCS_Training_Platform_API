@@ -94,6 +94,16 @@ const translations: Record<string, Record<ApiLocale, string>> = {
     vi: 'ID bài nộp không hợp lệ',
     ja: '送信IDが無効です',
   },
+  'submission.answer_not_found': {
+    en: 'Answer not found for the given order',
+    vi: 'Không tìm thấy câu trả lời cho thứ tự này',
+    ja: '指定された順序の回答が見つかりません',
+  },
+  'submission.answer_already_correct': {
+    en: 'This answer is already correct and cannot be resubmitted',
+    vi: 'Câu trả lời này đã đúng, không thể gửi lại',
+    ja: 'この回答は既に正解であり、再送信できません',
+  },
 
   // ── Common / Validation ───────────────────────────────────────────────
   'common.invalid_date': {

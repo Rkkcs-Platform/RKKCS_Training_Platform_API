@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Locale } from '../common/decorators/locale.decorator';
 import { SubmissionHistoryQueryDto } from '../common/dto/pagination-query.dto';
 import type { ApiLocale } from '../common/utils/i18n.util';
 import type { UserDocument } from '../schemas/user.schema';
+import { ResubmitCodeDto } from './dto/resubmit-code.dto';
 import { SubmitCodeDto } from './dto/submit-code.dto';
 import { SubmissionsService } from './submissions.service';
 
@@ -28,6 +29,16 @@ export class BatchesController {
     @Locale() locale: ApiLocale,
   ) {
     return this.submissionsService.submitTodayCode(user, dto.code, locale);
+  }
+
+  @Patch('resubmit-code')
+  @ApiOperation({ summary: 'Resubmit (replace) a wrong code for today' })
+  resubmitCode(
+    @CurrentUser() user: UserDocument,
+    @Body() dto: ResubmitCodeDto,
+    @Locale() locale: ApiLocale,
+  ) {
+    return this.submissionsService.resubmitCode(user, dto.order, dto.code, locale);
   }
 
   @Get('today/result')
