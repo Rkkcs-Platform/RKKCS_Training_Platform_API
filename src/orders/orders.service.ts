@@ -1,12 +1,13 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
-import { OrderStatus, ShipmentStatus } from '../common/enums';
+import { OrderStatus, PaymentStatus, ShipmentStatus } from '../common/enums';
 import {
   buildMapFromCityIds,
   buildMockShipmentMap,
@@ -32,6 +33,8 @@ import { ProductsService } from './products.service';
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     @InjectModel(Order.name)
     private readonly orderModel: Model<OrderDocument>,
@@ -382,7 +385,7 @@ export class OrdersService {
       order.shopId,
     );
     const quantity = 1;
-    const unitPrice = order.amount || product.price;
+    const unitPrice = product.price;
     await this.orderItemModel.create({
       orderId: order._id,
       productId: product._id,
@@ -392,6 +395,33 @@ export class OrdersService {
       unitPrice,
       lineTotal: unitPrice * quantity,
     });
+  }
+
+  async assignProductToOrder(
+    order: OrderDocument,
+    productId: string,
+    quantity: number,
+    shopId?: Types.ObjectId,
+  ) {
+    const resolvedShopId = this.asShopObjectId(shopId ?? order.shopId);
+    await this.replaceOrderItems(order, resolvedShopId, [
+      { productId, quantity },
+    ]);
+    await order.save();
+  }
+
+  private asShopObjectId(
+    shopId: Types.ObjectId | { _id: Types.ObjectId },
+  ): Types.ObjectId {
+    if (
+      shopId &&
+      typeof shopId === 'object' &&
+      '_id' in shopId &&
+      !(shopId instanceof Types.ObjectId)
+    ) {
+      return shopId._id;
+    }
+    return shopId as Types.ObjectId;
   }
 
   private async replaceOrderItems(
@@ -450,9 +480,39 @@ export class OrdersService {
       .findOne({ orderId: order._id })
       .exec();
     if (payment) {
-      payment.amount = amount;
-      await payment.save();
+      try {
+        await this.syncPaymentAmount(payment, order, amount);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Unknown payment error';
+        this.logger.warn(
+          `Skipped payment sync for order ${order.orderCode}: ${message}`,
+        );
+      }
     }
+  }
+
+  /**
+   * Legacy payments may lack paymentCode or use status `completed`.
+   * updateOne avoids full-document validation failing the product fill.
+   */
+  private async syncPaymentAmount(
+    payment: PaymentDocument,
+    order: OrderDocument,
+    amount: number,
+  ) {
+    const patch: Record<string, unknown> = { amount };
+    if (!payment.paymentCode?.trim()) {
+      patch.paymentCode = `PAY-${order.transactionCode}`;
+    }
+    const validStatuses = Object.values(PaymentStatus) as string[];
+    if (!validStatuses.includes(String(payment.status))) {
+      patch.status = PaymentStatus.PAID;
+    }
+
+    await this.paymentModel
+      .updateOne({ _id: payment._id }, { $set: patch })
+      .exec();
   }
 
   async getShopDashboard(user: UserDocument) {
