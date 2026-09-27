@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ActivityLogsModule } from '../activity-logs/activity-logs.module';
 import { DatabaseModule } from '../database/database.module';
 import { ShopsModule } from '../shops/shops.module';
 import { AdminOrdersController } from './admin-orders.controller';
@@ -7,6 +8,8 @@ import { CustomersController } from './customers.controller';
 import { DashboardController } from './dashboard.controller';
 import { GeocodeService } from './geocode.service';
 import { MapController } from './map.controller';
+import { OrderFillCronService } from './order-fill-cron.service';
+import { OrderFillService } from './order-fill.service';
 import { OrdersController } from './orders.controller';
 import { OrdersService } from './orders.service';
 import { PaymentsController } from './payments.controller';
@@ -15,7 +18,7 @@ import { ProductsService } from './products.service';
 import { ShipmentsController } from './shipments.controller';
 
 @Module({
-  imports: [DatabaseModule, ShopsModule],
+  imports: [DatabaseModule, ShopsModule, ActivityLogsModule],
   controllers: [
     AdminOrdersController,
     AdminProductsController,
@@ -27,7 +30,13 @@ import { ShipmentsController } from './shipments.controller';
     DashboardController,
     MapController,
   ],
-  providers: [OrdersService, ProductsService, GeocodeService],
+  providers: [
+    OrdersService,
+    ProductsService,
+    GeocodeService,
+    OrderFillService,
+    OrderFillCronService,
+  ],
   exports: [OrdersService, ProductsService, GeocodeService],
 })
 export class OrdersModule {}

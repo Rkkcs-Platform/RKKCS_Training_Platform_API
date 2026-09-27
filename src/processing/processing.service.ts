@@ -367,9 +367,9 @@ export class ProcessingService {
   private deriveAmount(transactionCode: string): number {
     let hash = 0;
     for (let i = 0; i < transactionCode.length; i += 1) {
-      hash = (hash + transactionCode.charCodeAt(i) * (i + 1)) % 900_000;
+      hash = (hash + transactionCode.charCodeAt(i) * (i + 1)) % 12_000;
     }
-    return 100_000 + hash;
+    return 1_280 + hash;
   }
 
   toJobResponse(job: ProcessingJobDocument) {

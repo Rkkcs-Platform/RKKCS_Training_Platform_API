@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { FILL_PRODUCTS } from '../common/data/order-fill/products';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto';
 import { ProductStatus } from '../common/enums';
 import {
@@ -97,7 +98,20 @@ export class ProductsService {
   async getShopOwnerProducts(user: UserDocument, query: PaginationQueryDto) {
     const shopId = await this.shopsService.resolveShopIdForUser(user);
     const { page, limit, skip } = parsePagination(query.page, query.limit);
-    const filter = { shopId, status: ProductStatus.ACTIVE };
+    const catalogCount = await this.productModel
+      .countDocuments({
+        shopId,
+        status: ProductStatus.ACTIVE,
+        productCode: { $ne: 'DEFAULT' },
+      })
+      .exec();
+    const filter: Record<string, unknown> = {
+      shopId,
+      status: ProductStatus.ACTIVE,
+    };
+    if (catalogCount > 0) {
+      filter.productCode = { $ne: 'DEFAULT' };
+    }
 
     const [items, total] = await Promise.all([
       this.productModel
@@ -118,27 +132,44 @@ export class ProductsService {
   async getOrCreateDefaultProduct(
     shopId: Types.ObjectId,
   ): Promise<ProductDocument> {
-    const existingDefault = await this.productModel
-      .findOne({ shopId, isDefault: true, status: ProductStatus.ACTIVE })
+    const catalogDefault = await this.productModel
+      .findOne({
+        shopId,
+        isDefault: true,
+        status: ProductStatus.ACTIVE,
+        productCode: { $ne: 'DEFAULT' },
+      })
       .exec();
-    if (existingDefault) return existingDefault;
+    if (catalogDefault) return catalogDefault;
 
-    const anyActive = await this.productModel
-      .findOne({ shopId, status: ProductStatus.ACTIVE })
+    const anyCatalog = await this.productModel
+      .findOne({
+        shopId,
+        status: ProductStatus.ACTIVE,
+        productCode: { $ne: 'DEFAULT' },
+      })
       .sort({ createdAt: 1 })
       .exec();
-    if (anyActive) {
-      anyActive.isDefault = true;
-      await anyActive.save();
-      return anyActive;
+    if (anyCatalog) {
+      await this.productModel
+        .updateMany({ shopId }, { $set: { isDefault: false } })
+        .exec();
+      anyCatalog.isDefault = true;
+      await anyCatalog.save();
+      return anyCatalog;
     }
+
+    const existingStub = await this.productModel
+      .findOne({ shopId, isDefault: true, status: ProductStatus.ACTIVE })
+      .exec();
+    if (existingStub) return existingStub;
 
     return this.productModel.create({
       shopId,
       productCode: 'DEFAULT',
       name: 'Sản phẩm mặc định',
       description: 'Tự tạo khi sinh đơn từ mã giao dịch',
-      price: 150_000,
+      price: 1_980,
       status: ProductStatus.ACTIVE,
       isDefault: true,
     });
@@ -162,6 +193,90 @@ export class ProductsService {
     }
 
     return product;
+  }
+
+  async ensureCatalogForShop(shopId: Types.ObjectId): Promise<{
+    created: number;
+    existing: number;
+  }> {
+    const codes = FILL_PRODUCTS.map((item) => item.productCode.trim().toUpperCase());
+    const existing = await this.productModel
+      .find({ shopId, productCode: { $in: codes } })
+      .select('productCode')
+      .lean()
+      .exec();
+    const have = new Set(existing.map((item) => item.productCode));
+    const missing = FILL_PRODUCTS.filter(
+      (item) => !have.has(item.productCode.trim().toUpperCase()),
+    );
+
+    if (missing.length) {
+      await this.productModel.insertMany(
+        missing.map((item) => ({
+          shopId,
+          productCode: item.productCode.trim().toUpperCase(),
+          name: item.name,
+          description: item.description,
+          price: item.price,
+          status: ProductStatus.ACTIVE,
+          isDefault: false,
+        })),
+        { ordered: false },
+      );
+    }
+
+    return { created: missing.length, existing: have.size };
+  }
+
+  async promoteCatalogAsDefault(shopId: Types.ObjectId): Promise<void> {
+    const catalog = await this.productModel
+      .findOne({
+        shopId,
+        status: ProductStatus.ACTIVE,
+        productCode: { $ne: 'DEFAULT' },
+      })
+      .sort({ productCode: 1 })
+      .exec();
+    if (!catalog) return;
+
+    await this.productModel
+      .updateMany({ shopId }, { $set: { isDefault: false } })
+      .exec();
+    catalog.isDefault = true;
+    await catalog.save();
+
+    await this.productModel
+      .updateMany(
+        { shopId, productCode: 'DEFAULT' },
+        { $set: { status: ProductStatus.INACTIVE, isDefault: false } },
+      )
+      .exec();
+  }
+
+  async listStubProductIds(shopId: Types.ObjectId): Promise<string[]> {
+    const stubs = await this.productModel
+      .find({
+        shopId,
+        $or: [
+          { productCode: 'DEFAULT' },
+          { name: /^sản phẩm mặc định$/i },
+        ],
+      })
+      .select('_id')
+      .exec();
+    return stubs.map((item) => item._id.toString());
+  }
+
+  async listAssignableProducts(
+    shopId: Types.ObjectId,
+  ): Promise<ProductDocument[]> {
+    return this.productModel
+      .find({
+        shopId,
+        status: ProductStatus.ACTIVE,
+        productCode: { $ne: 'DEFAULT' },
+      })
+      .exec();
   }
 
   private async createForShop(shopId: Types.ObjectId, dto: CreateProductDto) {
