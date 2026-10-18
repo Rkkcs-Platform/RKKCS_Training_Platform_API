@@ -33,19 +33,19 @@ export interface MockLatLng {
 /** Static catalog — pick from dropdown; map links current ↔ destination */
 export const MOCK_CITIES: MockCity[] = [
   // Japan
-  { id: 'jp-tokyo', name: 'Tokyo', region: 'japan', lat: 35.6812, lng: 139.7671 },
-  { id: 'jp-osaka', name: 'Osaka', region: 'japan', lat: 34.6937, lng: 135.5023 },
-  { id: 'jp-nagoya', name: 'Nagoya', region: 'japan', lat: 35.1815, lng: 136.9066 },
-  { id: 'jp-yokohama', name: 'Yokohama', region: 'japan', lat: 35.4437, lng: 139.638 },
-  { id: 'jp-kyoto', name: 'Kyoto', region: 'japan', lat: 35.0116, lng: 135.7681 },
-  { id: 'jp-kobe', name: 'Kobe', region: 'japan', lat: 34.6901, lng: 135.1955 },
-  { id: 'jp-sapporo', name: 'Sapporo', region: 'japan', lat: 43.0618, lng: 141.3545 },
-  { id: 'jp-fukuoka', name: 'Fukuoka', region: 'japan', lat: 33.5904, lng: 130.4017 },
-  { id: 'jp-sendai', name: 'Sendai', region: 'japan', lat: 38.2682, lng: 140.8694 },
-  { id: 'jp-hiroshima', name: 'Hiroshima', region: 'japan', lat: 34.3853, lng: 132.4553 },
-  { id: 'jp-shibuya', name: 'Tokyo Shibuya', region: 'japan', lat: 35.6595, lng: 139.7005 },
-  { id: 'jp-naha', name: 'Naha', region: 'japan', lat: 26.2124, lng: 127.6809 },
-  { id: 'jp-niigata', name: 'Niigata', region: 'japan', lat: 37.9161, lng: 139.0364 },
+  { id: 'jp-tokyo', name: '東京', region: 'japan', lat: 35.6812, lng: 139.7671 },
+  { id: 'jp-osaka', name: '大阪', region: 'japan', lat: 34.6937, lng: 135.5023 },
+  { id: 'jp-nagoya', name: '名古屋', region: 'japan', lat: 35.1815, lng: 136.9066 },
+  { id: 'jp-yokohama', name: '横浜', region: 'japan', lat: 35.4437, lng: 139.638 },
+  { id: 'jp-kyoto', name: '京都', region: 'japan', lat: 35.0116, lng: 135.7681 },
+  { id: 'jp-kobe', name: '神戸', region: 'japan', lat: 34.6901, lng: 135.1955 },
+  { id: 'jp-sapporo', name: '札幌', region: 'japan', lat: 43.0618, lng: 141.3545 },
+  { id: 'jp-fukuoka', name: '福岡', region: 'japan', lat: 33.5904, lng: 130.4017 },
+  { id: 'jp-sendai', name: '仙台', region: 'japan', lat: 38.2682, lng: 140.8694 },
+  { id: 'jp-hiroshima', name: '広島', region: 'japan', lat: 34.3853, lng: 132.4553 },
+  { id: 'jp-shibuya', name: '渋谷', region: 'japan', lat: 35.6595, lng: 139.7005 },
+  { id: 'jp-naha', name: '那覇', region: 'japan', lat: 26.2124, lng: 127.6809 },
+  { id: 'jp-niigata', name: '新潟', region: 'japan', lat: 37.9161, lng: 139.0364 },
   // Vietnam (optional region)
   { id: 'vn-hcm-tanbinh', name: 'Kho Tân Bình, TP.HCM', region: 'vietnam', lat: 10.812, lng: 106.652 },
   { id: 'vn-hcm-q1', name: 'Quận 1, TP.HCM', region: 'vietnam', lat: 10.772, lng: 106.698 },
@@ -128,7 +128,7 @@ export function buildMapFromCityIds(params: {
     };
   }
 
-  const country = region === 'japan' ? 'Japan' : 'Vietnam';
+  const country = region === 'japan' ? '日本' : 'Vietnam';
 
   return {
     region,

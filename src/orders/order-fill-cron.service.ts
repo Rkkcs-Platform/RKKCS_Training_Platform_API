@@ -28,6 +28,10 @@ export class OrderFillCronService {
         (sum, item) => sum + item.ordersProductUpdated,
         0,
       );
+      const shipmentsUpdated = result.results.reduce(
+        (sum, item) => sum + item.shipmentsUpdated,
+        0,
+      );
       const productsCreated = result.results.reduce(
         (sum, item) => sum + item.productsCreated,
         0,
@@ -41,12 +45,13 @@ export class OrderFillCronService {
           shopsProcessed: result.shopsProcessed,
           customersUpdated,
           ordersProductUpdated,
+          shipmentsUpdated,
           productsCreated,
         },
       });
 
       this.logger.log(
-        `2AM fill: ${result.shopsProcessed} shops, customers ${customersUpdated}, products ${ordersProductUpdated}, catalog +${productsCreated}`,
+        `2AM fill: ${result.shopsProcessed} shops, customers ${customersUpdated}, products ${ordersProductUpdated}, shipments ${shipmentsUpdated}, catalog +${productsCreated}`,
       );
     } catch (error) {
       const message =

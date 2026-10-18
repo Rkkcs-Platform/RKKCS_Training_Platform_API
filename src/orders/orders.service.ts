@@ -936,8 +936,8 @@ export class OrdersService {
     await this.recordShipmentEvent({
       shipmentId: shipment._id,
       status: ShipmentStatus.PENDING,
-      location: shipment.currentLocation || 'Warehouse',
-      note: 'Shipment created',
+      location: shipment.currentLocation || '集荷拠点',
+      note: '荷物を受け付けました',
     });
 
     if (
@@ -1062,13 +1062,13 @@ export class OrdersService {
   private defaultNoteForStatus(status: ShipmentStatus) {
     switch (status) {
       case ShipmentStatus.PENDING:
-        return 'Pending pickup';
+        return '集荷の受付が完了しました';
       case ShipmentStatus.IN_TRANSIT:
-        return 'In transit';
+        return '輸送中です。到着予定を確認してください';
       case ShipmentStatus.DELIVERED:
-        return 'Delivered successfully';
+        return '配達が完了しました';
       default:
-        return 'Shipping status updated';
+        return '配送ステータスを更新しました';
     }
   }
 
@@ -1218,6 +1218,13 @@ export class OrdersService {
       | Types.ObjectId
       | { _id: Types.ObjectId };
 
+    const productDocs = await this.productsService.findByIds(
+      items.map((item) => item.productId.toString()),
+    );
+    const productById = new Map(
+      productDocs.map((product) => [product._id.toString(), product]),
+    );
+
     return {
       id: order._id.toString(),
       shopId:
@@ -1250,15 +1257,21 @@ export class OrdersService {
             totalSpent: customer.totalSpent,
           }
         : { id: order.customerId.toString() },
-      items: items.map((item) => ({
-        id: item._id.toString(),
-        productId: item.productId.toString(),
-        productCode: item.productCode,
-        productName: item.productName,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        lineTotal: item.lineTotal,
-      })),
+      items: items.map((item) => {
+        const product = productById.get(item.productId.toString());
+        return {
+          id: item._id.toString(),
+          productId: item.productId.toString(),
+          productCode: item.productCode,
+          productName: item.productName,
+          brand: product?.brand,
+          sku: product?.sku,
+          imageUrl: product?.imageUrl,
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          lineTotal: item.lineTotal,
+        };
+      }),
       payment: payment
         ? {
             id: payment._id.toString(),

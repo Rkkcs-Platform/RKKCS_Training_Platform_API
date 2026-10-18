@@ -21,6 +21,15 @@ export class Product {
   @Prop({ trim: true })
   description?: string;
 
+  @Prop({ trim: true })
+  brand?: string;
+
+  @Prop({ trim: true, uppercase: true })
+  sku?: string;
+
+  @Prop({ trim: true })
+  imageUrl?: string;
+
   @Prop({ required: true, min: 0 })
   price: number;
 

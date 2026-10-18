@@ -31,7 +31,10 @@ export class ProductsService {
 
   async getAdminProducts(query: PaginationQueryDto & { shopId?: string }) {
     const { page, limit, skip } = parsePagination(query.page, query.limit);
-    const filter: Record<string, unknown> = {};
+    const filter: Record<string, unknown> = {
+      status: ProductStatus.ACTIVE,
+      ...this.notLegacyProductFilter(),
+    };
     if (query.shopId) {
       if (!Types.ObjectId.isValid(query.shopId)) {
         throw new BadRequestException('Invalid shop ID');
@@ -70,6 +73,9 @@ export class ProductsService {
 
     if (dto.name !== undefined) product.name = dto.name.trim();
     if (dto.description !== undefined) product.description = dto.description;
+    if (dto.brand !== undefined) product.brand = dto.brand.trim();
+    if (dto.sku !== undefined) product.sku = dto.sku.trim().toUpperCase();
+    if (dto.imageUrl !== undefined) product.imageUrl = dto.imageUrl.trim();
     if (dto.price !== undefined) product.price = dto.price;
     if (dto.status !== undefined) product.status = dto.status;
     if (dto.categoryId !== undefined) {
@@ -98,20 +104,11 @@ export class ProductsService {
   async getShopOwnerProducts(user: UserDocument, query: PaginationQueryDto) {
     const shopId = await this.shopsService.resolveShopIdForUser(user);
     const { page, limit, skip } = parsePagination(query.page, query.limit);
-    const catalogCount = await this.productModel
-      .countDocuments({
-        shopId,
-        status: ProductStatus.ACTIVE,
-        productCode: { $ne: 'DEFAULT' },
-      })
-      .exec();
     const filter: Record<string, unknown> = {
       shopId,
       status: ProductStatus.ACTIVE,
+      ...this.notLegacyProductFilter(),
     };
-    if (catalogCount > 0) {
-      filter.productCode = { $ne: 'DEFAULT' };
-    }
 
     const [items, total] = await Promise.all([
       this.productModel
@@ -137,7 +134,7 @@ export class ProductsService {
         shopId,
         isDefault: true,
         status: ProductStatus.ACTIVE,
-        productCode: { $ne: 'DEFAULT' },
+        ...this.notLegacyProductFilter(),
       })
       .exec();
     if (catalogDefault) return catalogDefault;
@@ -146,7 +143,7 @@ export class ProductsService {
       .findOne({
         shopId,
         status: ProductStatus.ACTIVE,
-        productCode: { $ne: 'DEFAULT' },
+        ...this.notLegacyProductFilter(),
       })
       .sort({ createdAt: 1 })
       .exec();
@@ -215,11 +212,40 @@ export class ProductsService {
         missing.map((item) => ({
           shopId,
           productCode: item.productCode.trim().toUpperCase(),
+          sku: item.sku,
+          brand: item.brand,
           name: item.name,
           description: item.description,
+          imageUrl: item.imageUrl,
           price: item.price,
           status: ProductStatus.ACTIVE,
           isDefault: false,
+        })),
+        { ordered: false },
+      );
+    }
+
+    if (have.size) {
+      await this.productModel.bulkWrite(
+        FILL_PRODUCTS.filter((item) =>
+          have.has(item.productCode.trim().toUpperCase()),
+        ).map((item) => ({
+          updateOne: {
+            filter: {
+              shopId,
+              productCode: item.productCode.trim().toUpperCase(),
+            },
+            update: {
+              $set: {
+                sku: item.sku,
+                brand: item.brand,
+                name: item.name,
+                description: item.description,
+                imageUrl: item.imageUrl,
+                price: item.price,
+              },
+            },
+          },
         })),
         { ordered: false },
       );
@@ -233,7 +259,7 @@ export class ProductsService {
       .findOne({
         shopId,
         status: ProductStatus.ACTIVE,
-        productCode: { $ne: 'DEFAULT' },
+        productCode: { $in: this.catalogCodes() },
       })
       .sort({ productCode: 1 })
       .exec();
@@ -245,23 +271,22 @@ export class ProductsService {
     catalog.isDefault = true;
     await catalog.save();
 
-    await this.productModel
+    await this.retireLegacyProducts(shopId);
+  }
+
+  async retireLegacyProducts(shopId: Types.ObjectId): Promise<number> {
+    const result = await this.productModel
       .updateMany(
-        { shopId, productCode: 'DEFAULT' },
+        { shopId, ...this.legacyProductFilter() },
         { $set: { status: ProductStatus.INACTIVE, isDefault: false } },
       )
       .exec();
+    return result.modifiedCount;
   }
 
   async listStubProductIds(shopId: Types.ObjectId): Promise<string[]> {
     const stubs = await this.productModel
-      .find({
-        shopId,
-        $or: [
-          { productCode: 'DEFAULT' },
-          { name: /^sản phẩm mặc định$/i },
-        ],
-      })
+      .find({ shopId, ...this.legacyProductFilter() })
       .select('_id')
       .exec();
     return stubs.map((item) => item._id.toString());
@@ -274,9 +299,17 @@ export class ProductsService {
       .find({
         shopId,
         status: ProductStatus.ACTIVE,
-        productCode: { $ne: 'DEFAULT' },
+        ...this.notLegacyProductFilter(),
       })
       .exec();
+  }
+
+  async findByIds(ids: string[]): Promise<ProductDocument[]> {
+    const objectIds = ids
+      .filter((id) => Types.ObjectId.isValid(id))
+      .map((id) => new Types.ObjectId(id));
+    if (!objectIds.length) return [];
+    return this.productModel.find({ _id: { $in: objectIds } }).exec();
   }
 
   private async createForShop(shopId: Types.ObjectId, dto: CreateProductDto) {
@@ -297,8 +330,11 @@ export class ProductsService {
     const product = await this.productModel.create({
       shopId,
       productCode,
+      sku: dto.sku?.trim().toUpperCase(),
+      brand: dto.brand?.trim(),
       name: dto.name.trim(),
       description: dto.description,
+      imageUrl: dto.imageUrl?.trim(),
       price: dto.price,
       status: dto.status ?? ProductStatus.ACTIVE,
       isDefault: dto.isDefault ?? false,
@@ -308,6 +344,38 @@ export class ProductsService {
     });
 
     return this.toResponse(product);
+  }
+
+  private catalogCodes(): string[] {
+    return FILL_PRODUCTS.map((item) => item.productCode.trim().toUpperCase());
+  }
+
+  private legacyProductFilter(): Record<string, unknown> {
+    return {
+      $or: [
+        { productCode: 'DEFAULT' },
+        { name: /^sản phẩm mặc định$/i },
+        {
+          productCode: { $nin: this.catalogCodes() },
+          $or: [
+            { imageUrl: { $exists: false } },
+            { imageUrl: null },
+            { imageUrl: '' },
+          ],
+        },
+      ],
+    };
+  }
+
+  private notLegacyProductFilter(): Record<string, unknown> {
+    return {
+      productCode: { $ne: 'DEFAULT' },
+      name: { $not: /^sản phẩm mặc định$/i },
+      $or: [
+        { imageUrl: { $gt: '' } },
+        { productCode: { $in: this.catalogCodes() } },
+      ],
+    };
   }
 
   private async findById(productId: string) {
@@ -350,8 +418,11 @@ export class ProductsService {
           }
         : undefined,
       productCode: product.productCode,
+      sku: product.sku,
+      brand: product.brand,
       name: product.name,
       description: product.description,
+      imageUrl: product.imageUrl,
       price: product.price,
       status: product.status,
       isDefault: Boolean(product.isDefault),

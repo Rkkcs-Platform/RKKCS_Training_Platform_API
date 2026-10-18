@@ -31,7 +31,25 @@ export class CreateProductDto {
   @MaxLength(500)
   description?: string;
 
-  @ApiProperty({ example: 150000 })
+  @ApiPropertyOptional({ example: 'UNIQORA' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  brand?: string;
+
+  @ApiPropertyOptional({ example: 'RK-TEE-WHT-M' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  sku?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  imageUrl?: string;
+
+  @ApiProperty({ example: 2980 })
   @IsNumber()
   @Min(0)
   price: number;
@@ -71,6 +89,24 @@ export class UpdateProductDto {
   @IsString()
   @MaxLength(500)
   description?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(80)
+  brand?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  sku?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  imageUrl?: string;
 
   @ApiPropertyOptional()
   @IsOptional()

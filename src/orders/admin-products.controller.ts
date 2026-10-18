@@ -51,7 +51,7 @@ export class AdminProductsController {
   @Post('fill-all')
   @ApiOperation({
     summary:
-      'Fill placeholder customer + replace DEFAULT products. Pass shopId for one shop, or omit to fill every active shop.',
+      'Fill JP catalog (brand/SKU/image), 2–3 line items, Yamato/Sagawa shipments, and payment methods. Pass shopId for one shop, or omit to fill every active shop.',
   })
   async fillAll(
     @CurrentUser() admin: UserDocument,
@@ -88,6 +88,14 @@ export class AdminProductsController {
       ),
       ordersProductUpdated: all.results.reduce(
         (sum, row) => sum + row.ordersProductUpdated,
+        0,
+      ),
+      shipmentsUpdated: all.results.reduce(
+        (sum, row) => sum + row.shipmentsUpdated,
+        0,
+      ),
+      paymentsUpdated: all.results.reduce(
+        (sum, row) => sum + row.paymentsUpdated,
         0,
       ),
       ordersScanned: all.results.reduce((sum, row) => sum + row.ordersScanned, 0),
