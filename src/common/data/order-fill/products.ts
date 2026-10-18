@@ -210,4 +210,104 @@ export const FILL_PRODUCTS: FillProductCatalogItem[] = [
     imageUrl:
       'https://images.unsplash.com/photo-1564890369478-c89ca6d9cde9?auto=format&fit=crop&w=400&h=400',
   },
+  {
+    productCode: 'SP-SUNGLASS01',
+    sku: 'RK-SG-UV400',
+    brand: 'HIKARI',
+    name: 'UVカットサングラス',
+    price: 3_980,
+    description: '偏光レンズ、ケース付き、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-HOODIE01',
+    sku: 'RK-HD-GRY-L',
+    brand: 'UNIQORA',
+    name: '裏起毛パーカー',
+    price: 4_980,
+    description: 'ユニセックス、グレー、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1556821840-3a63f95609a7?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-SLIPPER01',
+    sku: 'RK-SLP-NV-M',
+    brand: 'NEMURI',
+    name: '室内スリッパ',
+    price: 1_480,
+    description: '洗える、静音ソール、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-BOWL01',
+    sku: 'RK-BOWL-2P',
+    brand: 'MUJIKE',
+    name: 'どんぶり 2個セット',
+    price: 1_980,
+    description: '磁器、電子レンジ対応、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1610701596007-11502861dcfa?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-MASK01',
+    sku: 'RK-MASK-5P',
+    brand: 'HADA LAB',
+    name: '保湿フェイスマスク 5枚',
+    price: 1_280,
+    description: 'シートマスク、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1556228720-195a672e8a03?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-PACK01',
+    sku: 'RK-PACK-BLK',
+    brand: 'WALKNODE',
+    name: 'デイパック 20L',
+    price: 5_480,
+    description: '撥水、PC収納、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-MOUSE01',
+    sku: 'RK-MOUSE-WL',
+    brand: 'SONIQ',
+    name: 'ワイヤレスマウス',
+    price: 1_980,
+    description: '静音クリック、USB受信機、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-INCENSE01',
+    sku: 'RK-INC-SBY',
+    brand: 'KAORI',
+    name: '白檀のお香',
+    price: 880,
+    description: 'スティック40本、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-CHOP01',
+    sku: 'RK-CHOP-WD',
+    brand: 'MUJIKE',
+    name: '木製箸 2膳セット',
+    price: 780,
+    description: '天然木、食洗機対応、税込',
+    imageUrl:
+      'https://tshop.r10s.jp/hana2primitive/cabinet/kiju2023/b-9156x-top.jpg',
+  },
+  {
+    productCode: 'SP-MUG01',
+    sku: 'RK-MUG-350',
+    brand: 'THERMOYA',
+    name: '保温マグカップ 350ml',
+    price: 2_280,
+    description: '蓋付き、ステンレス、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?auto=format&fit=crop&w=400&h=400',
+  },
 ];
