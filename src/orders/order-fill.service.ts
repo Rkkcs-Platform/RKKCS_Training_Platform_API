@@ -90,6 +90,33 @@ export class OrderFillService {
     return this.fillShopDoc(shop._id, shop.shopCode);
   }
 
+  /** Fill one shop's given orders (used right after a code becomes an order). */
+  async fillByTransactionCodes(
+    shopId: Types.ObjectId,
+    transactionCodes: string[],
+  ): Promise<void> {
+    const codes = [
+      ...new Set(
+        transactionCodes.map((code) => code.trim().toUpperCase()).filter(Boolean),
+      ),
+    ];
+    if (!codes.length) return;
+
+    const orders = await this.orderModel
+      .find({ shopId, transactionCode: { $in: codes } })
+      .select('_id')
+      .lean()
+      .exec();
+    if (!orders.length) return;
+
+    const shop = await this.shopsService.findById(shopId.toString());
+    await this.fillShopDoc(
+      shop._id,
+      shop.shopCode,
+      orders.map((order) => order._id),
+    );
+  }
+
   async fillAllActiveShops(): Promise<{
     shopsProcessed: number;
     results: FillShopResult[];
@@ -104,6 +131,7 @@ export class OrderFillService {
   private async fillShopDoc(
     oid: Types.ObjectId,
     shopCode: string,
+    onlyOrderIds?: Types.ObjectId[],
   ): Promise<FillShopResult> {
     const catalog = await this.productsService.ensureCatalogForShop(oid);
     await this.productsService.promoteCatalogAsDefault(oid);
@@ -113,8 +141,13 @@ export class OrderFillService {
     ]);
     const stubIdSet = new Set(stubProductIds);
 
+    const orderFilter: Record<string, unknown> = { shopId: oid };
+    if (onlyOrderIds?.length) {
+      orderFilter._id = { $in: onlyOrderIds };
+    }
+
     const orders = await this.orderModel
-      .find({ shopId: oid })
+      .find(orderFilter)
       .select('_id customerId amount transactionCode orderCode')
       .lean()
       .exec();
