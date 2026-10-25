@@ -77,6 +77,87 @@ export class OrdersService {
     return this.getOrderDetail(orderId);
   }
 
+  async previewByTransactionCodes(codes: string[]) {
+    const unique = [
+      ...new Set(
+        codes.map((code) => code.trim().toUpperCase()).filter(Boolean),
+      ),
+    ];
+    const empty = new Map<
+      string,
+      {
+        customerName?: string;
+        productName?: string;
+        brand?: string;
+        imageUrl?: string;
+        extraItems: number;
+        amount?: number;
+        carrier?: string;
+        deliveryAddress?: string;
+      }
+    >();
+    if (!unique.length) return empty;
+
+    const orders = await this.orderModel
+      .find({ transactionCode: { $in: unique } })
+      .populate('customerId', 'fullName')
+      .select('_id transactionCode customerId amount')
+      .lean()
+      .exec();
+    if (!orders.length) return empty;
+
+    const shipments = await this.shipmentModel
+      .find({ orderId: { $in: orders.map((order) => order._id) } })
+      .select('orderId carrier deliveryAddress')
+      .lean()
+      .exec();
+    const shipmentByOrder = new Map(
+      shipments.map((shipment) => [shipment.orderId.toString(), shipment]),
+    );
+
+    const items = await this.orderItemModel
+      .find({ orderId: { $in: orders.map((order) => order._id) } })
+      .sort({ createdAt: 1 })
+      .select('orderId productId productName')
+      .lean()
+      .exec();
+    const products = await this.productsService.findByIds(
+      items.map((item) => item.productId.toString()),
+    );
+    const productById = new Map(
+      products.map((product) => [product._id.toString(), product]),
+    );
+    const itemsByOrder = new Map<string, typeof items>();
+    for (const item of items) {
+      const key = item.orderId.toString();
+      const list = itemsByOrder.get(key);
+      if (list) list.push(item);
+      else itemsByOrder.set(key, [item]);
+    }
+
+    for (const order of orders) {
+      const lines = itemsByOrder.get(order._id.toString()) ?? [];
+      const first = lines[0];
+      const product = first
+        ? productById.get(first.productId.toString())
+        : undefined;
+      const customer = order.customerId as { fullName?: string } | null;
+      const shipment = shipmentByOrder.get(order._id.toString());
+      empty.set(order.transactionCode, {
+        customerName: this.displayCustomerName(customer?.fullName),
+        productName: this.displayProductName(first?.productName),
+        brand: product?.brand,
+        imageUrl: product?.imageUrl,
+        extraItems: Math.max(0, lines.length - 1),
+        amount: order.amount,
+        carrier: shipment?.carrier,
+        deliveryAddress: shipment?.deliveryAddress,
+      });
+    }
+
+    return empty;
+  }
+
   async getShopOwnerOrders(user: UserDocument, query: PaginationQueryDto) {
     const shopId = await this.shopsService.resolveShopIdForUser(user);
     const { page, limit, skip } = parsePagination(query.page, query.limit);
@@ -1089,6 +1170,22 @@ export class OrdersService {
         (status === 'delivered' && step.key === 'delivered'),
       current: step.key === status,
     }));
+  }
+
+  private displayCustomerName(name?: string) {
+    const raw = (name || '').trim();
+    if (!raw || /^chưa cập nhật/i.test(raw) || /^customer\s+/i.test(raw)) {
+      return undefined;
+    }
+    return raw;
+  }
+
+  private displayProductName(name?: string) {
+    const raw = (name || '').trim();
+    if (!raw || raw === 'DEFAULT' || /^sản phẩm mặc định$/i.test(raw)) {
+      return undefined;
+    }
+    return raw;
   }
 
   private toDateKey(date: Date) {

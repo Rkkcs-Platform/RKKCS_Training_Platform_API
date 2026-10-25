@@ -310,4 +310,204 @@ export const FILL_PRODUCTS: FillProductCatalogItem[] = [
     imageUrl:
       'https://images.unsplash.com/photo-1514228742587-6b1558fcca3d?auto=format&fit=crop&w=400&h=400',
   },
+  {
+    productCode: 'SP-COAT01',
+    sku: 'RK-COAT-BEG-L',
+    brand: 'UNIQORA',
+    name: 'チェスターコート',
+    price: 12_800,
+    description: 'ユニセックス、ベージュ、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1539533018447-63fcce2678e3?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-SHIRT01',
+    sku: 'RK-SHIRT-BLU-M',
+    brand: 'DENIMYA',
+    name: 'オックスフォードシャツ',
+    price: 3_980,
+    description: '長袖、コットン混紡、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-DRESS01',
+    sku: 'RK-DRESS-BLK-M',
+    brand: 'UNIQORA',
+    name: 'カジュアルワンピース',
+    price: 4_980,
+    description: 'シンプルなデザイン、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1539008835657-9e8e9680c956?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-SANDAL01',
+    sku: 'RK-SANDAL-BRN-26',
+    brand: 'WALKNODE',
+    name: 'レザーサンダル',
+    price: 5_480,
+    description: '軽量ソール、デイリーユース、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1603487742131-4160ec999306?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-WALLET01',
+    sku: 'RK-WALLET-BLK',
+    brand: 'TOKII',
+    name: '二つ折り財布',
+    price: 3_280,
+    description: 'コンパクト設計、カード収納付き、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1627123424574-724758594e93?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-BELT01',
+    sku: 'RK-BELT-BLK-100',
+    brand: 'TOKII',
+    name: '本革ベルト',
+    price: 2_980,
+    description: 'シンプルなバックル、長さ100cm、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1752386341161-de2b02ea1f50?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-BOTTLE01',
+    sku: 'RK-BOTTLE-750',
+    brand: 'THERMOYA',
+    name: 'ステンレスボトル 750ml',
+    price: 3_280,
+    description: '保温・保冷対応、ワンタッチ開閉、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1523362628745-0c100150b8a3?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-SPEAKER01',
+    sku: 'RK-SPK-BT-BK',
+    brand: 'SONIQ',
+    name: 'Bluetoothスピーカー',
+    price: 4_980,
+    description: 'コンパクト、防滴仕様、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-KEYBOARD01',
+    sku: 'RK-KBD-WL-WHT',
+    brand: 'SONIQ',
+    name: 'ワイヤレスキーボード',
+    price: 3_480,
+    description: '薄型設計、静音キー、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-STAND01',
+    sku: 'RK-STAND-PH',
+    brand: 'SONIQ',
+    name: 'スマートフォンスタンド',
+    price: 1_280,
+    description: '角度調整可能、折りたたみ式、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1586953208448-b95a79798f07?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-POWER01',
+    sku: 'RK-PBANK-10000',
+    brand: 'SONIQ',
+    name: 'モバイルバッテリー 10000mAh',
+    price: 3_980,
+    description: 'USB-C対応、コンパクト設計、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-ROUTER01',
+    sku: 'RK-ROUTER-WIFI',
+    brand: 'SONIQ',
+    name: 'ポータブルWi-Fiルーター',
+    price: 6_980,
+    description: 'コンパクト設計、USB給電対応、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-CLOCK01',
+    sku: 'RK-CLOCK-WHT',
+    brand: 'TOKII',
+    name: 'デジタル目覚まし時計',
+    price: 2_480,
+    description: 'LED表示、アラーム機能付き、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1508057198894-247b23fe5ade?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-PLANT01',
+    sku: 'RK-PLANT-MINI',
+    brand: 'MUJIKE',
+    name: 'ミニ観葉植物',
+    price: 1_680,
+    description: '室内用、陶器鉢付き、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1485955900006-10f4d324d411?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-VASE01',
+    sku: 'RK-VASE-GLS',
+    brand: 'MUJIKE',
+    name: 'ガラスフラワーベース',
+    price: 1_980,
+    description: '透明ガラス製、シンプルデザイン、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1578500494198-246f612d3b3d?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-BLANKET01',
+    sku: 'RK-BLANKET-GRY',
+    brand: 'NEMURI',
+    name: 'マイクロファイバー毛布',
+    price: 2_980,
+    description: '軽量、やわらかな肌触り、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1600369671236-e74521d4b6ad?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-CUSHION01',
+    sku: 'RK-CUSHION-BEG',
+    brand: 'NEMURI',
+    name: 'クッションカバー',
+    price: 1_280,
+    description: '45×45cm、洗濯可能、税込',
+    imageUrl:
+  'https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-PLATE01',
+    sku: 'RK-PLATE-2P',
+    brand: 'MUJIKE',
+    name: 'セラミックプレート 2枚セット',
+    price: 1_780,
+    description: '磁器製、電子レンジ対応、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1493106641515-6b5631de4bb9?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-COFFEE01',
+    sku: 'RK-COFFEE-200',
+    brand: 'UJIKO',
+    name: 'オリジナルコーヒー豆 200g',
+    price: 1_580,
+    description: '中煎り、豊かな香り、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?auto=format&fit=crop&w=400&h=400',
+  },
+  {
+    productCode: 'SP-HONEY01',
+    sku: 'RK-HONEY-250',
+    brand: 'UJIKO',
+    name: '純粋はちみつ 250g',
+    price: 1_280,
+    description: '毎日の食卓におすすめ、税込',
+    imageUrl:
+      'https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&w=400&h=400',
+  },
 ];

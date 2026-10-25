@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ActivityLogsModule } from '../activity-logs/activity-logs.module';
 import { ChallengesModule } from '../challenges/challenges.module';
 import { DatabaseModule } from '../database/database.module';
+import { OrdersModule } from '../orders/orders.module';
 import { ProcessingJobsModule } from '../processing/processing.module';
 import { ShopsModule } from '../shops/shops.module';
 import { AdminSubmissionsController } from './admin-submissions.controller';
@@ -16,6 +17,7 @@ import { UserChallengesController } from './user-challenges.controller';
     ChallengesModule,
     ShopsModule,
     ProcessingJobsModule,
+    OrdersModule,
   ],
   controllers: [
     UserChallengesController,

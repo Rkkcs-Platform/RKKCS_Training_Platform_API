@@ -8,6 +8,7 @@ import { CustomersController } from './customers.controller';
 import { DashboardController } from './dashboard.controller';
 import { GeocodeService } from './geocode.service';
 import { MapController } from './map.controller';
+import { OrderAgingService } from './order-aging.service';
 import { OrderFillCronService } from './order-fill-cron.service';
 import { OrderFillService } from './order-fill.service';
 import { OrdersController } from './orders.controller';
@@ -36,7 +37,8 @@ import { ShipmentsController } from './shipments.controller';
     GeocodeService,
     OrderFillService,
     OrderFillCronService,
+    OrderAgingService,
   ],
-  exports: [OrdersService, ProductsService, GeocodeService],
+  exports: [OrdersService, ProductsService, GeocodeService, OrderFillService],
 })
 export class OrdersModule {}

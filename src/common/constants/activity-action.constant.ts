@@ -15,6 +15,7 @@ export const ACTIVITY_ACTION = {
   SHOP_UPDATE: 'SHOP_UPDATE',
   ORDER_FILL_CRON: 'ORDER_FILL_CRON',
   ORDER_FILL_ALL: 'ORDER_FILL_ALL',
+  ORDER_AGE_CRON: 'ORDER_AGE_CRON',
 } as const;
 
 export type ActivityAction =

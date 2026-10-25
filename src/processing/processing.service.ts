@@ -9,6 +9,7 @@ import {
 } from '../common/enums';
 import { buildMockShipmentMap } from '../common/utils';
 import { ChallengesService } from '../challenges/challenges.service';
+import { OrderFillService } from '../orders/order-fill.service';
 import { OrdersService } from '../orders/orders.service';
 import { Customer, CustomerDocument } from '../schemas/customer.schema';
 import { Order, OrderDocument } from '../schemas/order.schema';
@@ -46,6 +47,7 @@ export class ProcessingService {
     private readonly shipmentModel: Model<ShipmentDocument>,
     private readonly challengesService: ChallengesService,
     private readonly ordersService: OrdersService,
+    private readonly orderFillService: OrderFillService,
   ) {}
 
   /**
@@ -73,6 +75,7 @@ export class ProcessingService {
     const correctAnswers = submission.answers.filter(
       (answer) => answer.isCorrect && (answer.matchedCode || answer.inputCode),
     );
+    const transactionCodes: string[] = [];
 
     for (const answer of correctAnswers) {
       const transactionCode = (
@@ -86,6 +89,7 @@ export class ProcessingService {
           batchId: challenge._id,
           submissionId: submission._id,
         });
+        transactionCodes.push(transactionCode);
         if (created) {
           generatedOrders += 1;
         }
@@ -97,6 +101,8 @@ export class ProcessingService {
         );
       }
     }
+
+    await this.fillOrdersForCodes(shopId, transactionCodes);
 
     if (generatedOrders > 0) {
       this.logger.log(
@@ -164,6 +170,7 @@ export class ProcessingService {
         .exec();
 
       let generatedOrders = 0;
+      const transactionCodes: string[] = [];
 
       for (const submission of submissions) {
         const correctAnswers = submission.answers.filter(
@@ -186,7 +193,12 @@ export class ProcessingService {
           if (created) {
             generatedOrders += 1;
           }
+          transactionCodes.push(transactionCode);
         }
+      }
+
+      if (shopId) {
+        await this.fillOrdersForCodes(shopId, transactionCodes);
       }
 
       job.status = ProcessingJobStatus.COMPLETED;
@@ -213,6 +225,23 @@ export class ProcessingService {
       );
 
       throw error;
+    }
+  }
+
+  private async fillOrdersForCodes(
+    shopId: Types.ObjectId,
+    transactionCodes: string[],
+  ) {
+    if (!transactionCodes.length) return;
+    try {
+      await this.orderFillService.fillByTransactionCodes(
+        shopId,
+        transactionCodes,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown fill error';
+      this.logger.error(`Failed to fill orders after code entry: ${message}`);
     }
   }
 
