@@ -24,7 +24,6 @@ import {
 import { SubmissionHistoryQueryDto } from '../common/dto/pagination-query.dto';
 import { AdminSubmissionListQueryDto } from './dto/admin-submission-list-query.dto';
 import { ChallengesService } from '../challenges/challenges.service';
-import { OrderFillService } from '../orders/order-fill.service';
 import { OrdersService } from '../orders/orders.service';
 import { ProcessingService } from '../processing/processing.service';
 import { ChallengeDocument } from '../schemas/challenge.schema';
@@ -44,7 +43,6 @@ export class SubmissionsService {
     private readonly shopsService: ShopsService,
     private readonly activityLogsService: ActivityLogsService,
     private readonly processingService: ProcessingService,
-    private readonly orderFillService: OrderFillService,
     private readonly ordersService: OrdersService,
   ) {}
 
@@ -113,12 +111,9 @@ export class SubmissionsService {
       },
     });
 
-    // Spec: 1 correct code → 1 order, then fill that order before the client reloads the list.
-    if (isCorrect) {
-      await this.processingService
-        .processSubmissionCorrectAnswers(submission._id)
-        .catch(() => undefined);
-    }
+    const orderPreview = isCorrect
+      ? await this.settleCorrectCode(challenge, submission, matchedCode)
+      : undefined;
 
     if (completed) {
       this.activityLogsService.recordFromUser(user, {
@@ -147,7 +142,11 @@ export class SubmissionsService {
       submitted: submission.totalSubmitted,
       correct: submission.totalCorrect,
       wrong: submission.totalWrong,
+      accuracy: submission.accuracy,
       completed,
+      inputCode,
+      submittedAt: submission.answers.at(-1)?.submittedAt,
+      orderPreview,
     };
   }
 
@@ -211,11 +210,9 @@ export class SubmissionsService {
       },
     });
 
-    if (isCorrect) {
-      await this.processingService
-        .processSubmissionCorrectAnswers(submission._id)
-        .catch(() => undefined);
-    }
+    const orderPreview = isCorrect
+      ? await this.settleCorrectCode(challenge, submission, matchedCode)
+      : undefined;
 
     return {
       isCorrect,
@@ -223,7 +220,11 @@ export class SubmissionsService {
       submitted: submission.totalSubmitted,
       correct: submission.totalCorrect,
       wrong: submission.totalWrong,
+      accuracy: submission.accuracy,
       completed: submission.status === SubmissionStatus.COMPLETED,
+      inputCode,
+      submittedAt: answer.submittedAt,
+      orderPreview,
     };
   }
 
@@ -240,7 +241,7 @@ export class SubmissionsService {
       throw new NotFoundException(t('submission.not_found_today', locale));
     }
 
-    return this.toResultResponse(challenge, submission, true);
+    return this.toResultResponse(challenge, submission);
   }
 
   async getHistory(user: UserDocument, query: SubmissionHistoryQueryDto) {
@@ -490,21 +491,36 @@ export class SubmissionsService {
     };
   }
 
+  private async settleCorrectCode(
+    challenge: ChallengeDocument,
+    submission: UserSubmissionDocument,
+    matchedCode?: string,
+  ) {
+    if (!matchedCode || !challenge.shopId) return undefined;
+
+    await this.processingService
+      .processCorrectCode({
+        shopId: challenge.shopId,
+        transactionCode: matchedCode,
+        batchId: challenge._id,
+        submissionId: submission._id,
+      })
+      .catch(() => undefined);
+
+    const previews = await this.ordersService
+      .previewByTransactionCodes([matchedCode])
+      .catch(() => null);
+
+    return previews?.get(matchedCode.toUpperCase());
+  }
+
   private async toResultResponse(
     challenge: ChallengeDocument | null,
     submission: UserSubmissionDocument,
-    fillOrders = false,
   ) {
     const codes = submission.answers
       .filter((answer) => answer.isCorrect)
       .map((answer) => (answer.matchedCode || answer.inputCode).toUpperCase());
-    const shopId = challenge?.shopId ?? submission.shopId;
-
-    if (fillOrders && shopId && codes.length) {
-      await this.orderFillService
-        .fillByTransactionCodes(shopId, codes)
-        .catch(() => undefined);
-    }
 
     const previews = await this.ordersService.previewByTransactionCodes(codes);
 

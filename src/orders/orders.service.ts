@@ -106,21 +106,23 @@ export class OrdersService {
       .exec();
     if (!orders.length) return empty;
 
-    const shipments = await this.shipmentModel
-      .find({ orderId: { $in: orders.map((order) => order._id) } })
-      .select('orderId carrier deliveryAddress')
-      .lean()
-      .exec();
+    const orderIds = orders.map((order) => order._id);
+    const [shipments, items] = await Promise.all([
+      this.shipmentModel
+        .find({ orderId: { $in: orderIds } })
+        .select('orderId carrier deliveryAddress')
+        .lean()
+        .exec(),
+      this.orderItemModel
+        .find({ orderId: { $in: orderIds } })
+        .sort({ createdAt: 1, _id: 1 })
+        .select('orderId productId productName')
+        .lean()
+        .exec(),
+    ]);
     const shipmentByOrder = new Map(
       shipments.map((shipment) => [shipment.orderId.toString(), shipment]),
     );
-
-    const items = await this.orderItemModel
-      .find({ orderId: { $in: orders.map((order) => order._id) } })
-      .sort({ createdAt: 1 })
-      .select('orderId productId productName')
-      .lean()
-      .exec();
     const products = await this.productsService.findByIds(
       items.map((item) => item.productId.toString()),
     );
