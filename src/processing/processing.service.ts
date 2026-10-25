@@ -123,17 +123,21 @@ export class ProcessingService {
     batchId: Types.ObjectId;
     submissionId: Types.ObjectId;
   }) {
+    const transactionCode = params.transactionCode.toUpperCase();
+
     try {
       const created = await this.ensureOrderTree({
         shopId: params.shopId,
-        transactionCode: params.transactionCode.toUpperCase(),
+        transactionCode,
         batchId: params.batchId,
         submissionId: params.submissionId,
       });
 
+      await this.fillOrdersForCodes(params.shopId, [transactionCode]);
+
       if (created) {
         this.logger.log(
-          `Created order for code ${params.transactionCode} (batch ${params.batchId.toString()})`,
+          `Created order for code ${transactionCode} (batch ${params.batchId.toString()})`,
         );
       }
 
@@ -283,10 +287,18 @@ export class ProcessingService {
       });
 
       customer.totalSpent += amount;
-      await customer.save();
-
-      await this.ensurePaymentAndShipment(order);
-      await this.ordersService.ensureDefaultOrderItem(order);
+      await Promise.all([
+        customer.save(),
+        this.paymentModel.create({
+          orderId: order._id,
+          paymentCode: `PAY-${order.transactionCode}`,
+          amount: order.amount,
+          status: PaymentStatus.PAID,
+          method: 'system',
+        }),
+        this.createInitialShipment(order),
+        this.ordersService.ensureDefaultOrderItem(order),
+      ]);
       return true;
     } catch (error) {
       const isDuplicate =
@@ -308,6 +320,34 @@ export class ProcessingService {
 
       throw error;
     }
+  }
+
+  private async createInitialShipment(order: OrderDocument) {
+    const eta = new Date();
+    eta.setDate(eta.getDate() + 3);
+    const map = buildMockShipmentMap(
+      order.transactionCode,
+      ShipmentStatus.PENDING,
+    );
+
+    const shipment = await this.shipmentModel.create({
+      orderId: order._id,
+      shipmentCode: `SHP-${order.transactionCode}`,
+      carrier: 'RKKCS Express',
+      status: ShipmentStatus.PENDING,
+      currentLocation: map.currentLocationText,
+      deliveryAddress: map.deliveryAddressText,
+      currentLat: map.currentLat,
+      currentLng: map.currentLng,
+      destLat: map.destLat,
+      destLng: map.destLng,
+      currentCityId: map.currentCityId,
+      destCityId: map.destCityId,
+      mapIsMock: true,
+      eta,
+    });
+
+    await this.ordersService.ensureShipmentEvents(shipment);
   }
 
   private async ensurePaymentAndShipment(order: OrderDocument) {

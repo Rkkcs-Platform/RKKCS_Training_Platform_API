@@ -64,9 +64,27 @@ type ProductWrite = {
 
 const SHOP_CONCURRENCY = 3;
 
+/** Tops and clothes. The slip shows one main product, so these should not stack. */
+const APPAREL_CODES = new Set([
+  'SP-TEE01',
+  'SP-HOODIE01',
+  'SP-COAT01',
+  'SP-SHIRT01',
+  'SP-DRESS01',
+  'SP-PANTS01',
+  'SP-HAT01',
+  'SP-SOCK01',
+  'SP-SANDAL01',
+  'SP-SHOE01',
+  'SP-SLIPPER01',
+  'SP-BELT01',
+]);
+
 @Injectable()
 export class OrderFillService {
   private readonly logger = new Logger(OrderFillService.name);
+  /** Main products already shown on recent slips, oldest first. */
+  private readonly recentMainProductCodes: string[] = [];
 
   constructor(
     @InjectModel(Order.name)
@@ -133,13 +151,21 @@ export class OrderFillService {
     shopCode: string,
     onlyOrderIds?: Types.ObjectId[],
   ): Promise<FillShopResult> {
-    const catalog = await this.productsService.ensureCatalogForShop(oid);
-    await this.productsService.promoteCatalogAsDefault(oid);
+    const partial = Boolean(onlyOrderIds?.length);
+    const catalog = await this.productsService.ensureCatalogForShop(oid, {
+      syncExisting: !partial,
+    });
+    if (!partial) {
+      await this.productsService.promoteCatalogAsDefault(oid);
+    }
     const [assignable, stubProductIds] = await Promise.all([
       this.productsService.listAssignableProducts(oid),
       this.productsService.listStubProductIds(oid),
     ]);
     const stubIdSet = new Set(stubProductIds);
+    const defaultProductId = assignable
+      .find((product) => product.isDefault)
+      ?._id.toString();
 
     const orderFilter: Record<string, unknown> = { shopId: oid };
     if (onlyOrderIds?.length) {
@@ -238,8 +264,13 @@ export class OrderFillService {
     if (assignable.length) {
       for (const order of orders) {
         const orderItems = itemsByOrder.get(order._id.toString()) ?? [];
+        const onlyDefaultPlaceholder =
+          orderItems.length === 1 &&
+          !!defaultProductId &&
+          orderItems[0].productId.toString() === defaultProductId;
         const needsFill =
           !orderItems.length ||
+          onlyDefaultPlaceholder ||
           orderItems.some((item) => this.isStubProductItem(item, stubIdSet));
         if (!needsFill) continue;
 
@@ -247,6 +278,7 @@ export class OrderFillService {
           order._id,
           assignable,
           orderItems[0]?.quantity || 1,
+          order.transactionCode,
         );
         productWrites.push({
           orderId: order._id,
@@ -310,9 +342,14 @@ export class OrderFillService {
     orderId: Types.ObjectId,
     assignable: ProductDocument[],
     existingQty: number,
+    seed: string,
   ): { items: FillLineItem[]; amount: number } {
-    const count = Math.min(assignable.length, randomInt(2, 4));
-    const products = this.pickDistinct(assignable, Math.max(1, count));
+    const catalog = [...assignable].sort((a, b) =>
+      a.productCode.localeCompare(b.productCode),
+    );
+    const count = Math.min(catalog.length, 2 + (this.hashSeed(seed) % 2));
+    const main = this.pickMainProduct(catalog, seed);
+    const products = [main, ...this.pickExtras(catalog, main, count - 1, seed)];
     const items = products.map((product, index) => {
       const quantity =
         index === 0 ? Math.max(1, existingQty) : randomInt(1, 3);
@@ -707,22 +744,86 @@ export class OrderFillService {
     );
   }
 
+  private pickMainProduct(
+    catalog: ProductDocument[],
+    seed: string,
+  ): ProductDocument {
+    const recentCodes = new Set(this.recentMainProductCodes);
+    const apparelJustShown = this.recentMainProductCodes
+      .slice(-2)
+      .some((code) => this.productKind(code) === 'apparel');
+    const start = this.hashSeed(seed) % catalog.length;
+    let chosen = catalog[start];
+
+    for (let step = 0; step < catalog.length; step += 1) {
+      const candidate = catalog[(start + step) % catalog.length];
+      if (recentCodes.has(candidate.productCode)) continue;
+      if (
+        apparelJustShown &&
+        this.productKind(candidate.productCode) === 'apparel'
+      ) {
+        continue;
+      }
+      chosen = candidate;
+      break;
+    }
+
+    this.recentMainProductCodes.push(chosen.productCode);
+    const limit = Math.max(1, Math.min(24, catalog.length - 1));
+    while (this.recentMainProductCodes.length > limit) {
+      this.recentMainProductCodes.shift();
+    }
+    return chosen;
+  }
+
+  private pickExtras(
+    catalog: ProductDocument[],
+    main: ProductDocument,
+    count: number,
+    seed: string,
+  ): ProductDocument[] {
+    if (count <= 0) return [];
+    const mainKind = this.productKind(main.productCode);
+    const others = catalog.filter(
+      (product) => product.productCode !== main.productCode,
+    );
+    const differentKind = others.filter(
+      (product) => this.productKind(product.productCode) !== mainKind,
+    );
+    const pool = differentKind.length >= count ? differentKind : others;
+    if (!pool.length) return [];
+
+    const start = this.hashSeed(`${seed}:extra`) % pool.length;
+    const picked: ProductDocument[] = [];
+    const seen = new Set<string>([main.productCode]);
+    for (let step = 0; step < pool.length && picked.length < count; step += 1) {
+      const candidate = pool[(start + step) % pool.length];
+      if (seen.has(candidate.productCode)) continue;
+      seen.add(candidate.productCode);
+      picked.push(candidate);
+    }
+    return picked;
+  }
+
+  private productKind(productCode: string): 'apparel' | 'other' {
+    return APPAREL_CODES.has(productCode.trim().toUpperCase())
+      ? 'apparel'
+      : 'other';
+  }
+
+  private hashSeed(seed: string): number {
+    let hash = 0;
+    for (let i = 0; i < seed.length; i += 1) {
+      hash = (hash * 33 + seed.charCodeAt(i)) >>> 0;
+    }
+    return hash;
+  }
+
   private pick<T>(items: readonly T[]): T {
     if (!items.length) {
       throw new Error('Cannot pick from an empty list');
     }
     return items[randomInt(items.length)] as T;
-  }
-
-  private pickDistinct<T>(items: readonly T[], count: number): T[] {
-    const n = Math.min(count, items.length);
-    const copy = items.slice();
-    const picked: T[] = [];
-    for (let i = 0; i < n; i += 1) {
-      const index = randomInt(copy.length);
-      picked.push(copy.splice(index, 1)[0] as T);
-    }
-    return picked;
   }
 
   private async mapPool<T, R>(

@@ -192,10 +192,21 @@ export class ProductsService {
     return product;
   }
 
-  async ensureCatalogForShop(shopId: Types.ObjectId): Promise<{
+  private readonly catalogReadyShopIds = new Set<string>();
+
+  async ensureCatalogForShop(
+    shopId: Types.ObjectId,
+    options?: { syncExisting?: boolean },
+  ): Promise<{
     created: number;
     existing: number;
   }> {
+    const syncExisting = options?.syncExisting !== false;
+    const shopKey = shopId.toString();
+    if (!syncExisting && this.catalogReadyShopIds.has(shopKey)) {
+      return { created: 0, existing: FILL_PRODUCTS.length };
+    }
+
     const codes = FILL_PRODUCTS.map((item) => item.productCode.trim().toUpperCase());
     const existing = await this.productModel
       .find({ shopId, productCode: { $in: codes } })
@@ -225,7 +236,7 @@ export class ProductsService {
       );
     }
 
-    if (have.size) {
+    if (syncExisting && have.size) {
       await this.productModel.bulkWrite(
         FILL_PRODUCTS.filter((item) =>
           have.has(item.productCode.trim().toUpperCase()),
@@ -249,6 +260,10 @@ export class ProductsService {
         })),
         { ordered: false },
       );
+    }
+
+    if (!missing.length) {
+      this.catalogReadyShopIds.add(shopKey);
     }
 
     return { created: missing.length, existing: have.size };
