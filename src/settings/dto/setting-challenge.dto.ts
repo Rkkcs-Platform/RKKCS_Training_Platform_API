@@ -1,4 +1,12 @@
-import { IsBoolean, IsIn, IsNumber, IsString, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsNumber,
+  IsString,
+  Matches,
+  Min,
+  ValidateIf,
+} from 'class-validator';
 
 export class UpdateChallengeSettingDto {
   @IsNumber()
@@ -19,6 +27,14 @@ export class UpdateChallengeSettingDto {
 export class ToggleMaintenanceDto {
   @IsBoolean()
   enabled: boolean;
+
+  /** End time today as HH:mm (Asia/Ho_Chi_Minh). Required when enabling. */
+  @ValidateIf((dto: ToggleMaintenanceDto) => dto.enabled === true)
+  @IsString()
+  @Matches(/^\d{2}:\d{2}$/, {
+    message: 'until must be HH:mm',
+  })
+  until?: string;
 }
 
 export class SetLanguageDto {

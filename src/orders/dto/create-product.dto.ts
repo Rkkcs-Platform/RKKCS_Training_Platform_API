@@ -46,7 +46,7 @@ export class CreateProductDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @MaxLength(500)
+  @MaxLength(2000)
   imageUrl?: string;
 
   @ApiProperty({ example: 2980 })
@@ -105,7 +105,7 @@ export class UpdateProductDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  @MaxLength(500)
+  @MaxLength(2000)
   imageUrl?: string;
 
   @ApiPropertyOptional()
