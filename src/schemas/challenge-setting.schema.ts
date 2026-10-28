@@ -26,6 +26,10 @@ export class ChallengeSetting {
   @Prop({ default: false })
   maintenanceMode: boolean;
 
+  /** When set, maintenance ends at this time (Asia/Ho_Chi_Minh). */
+  @Prop({ type: Date, default: null })
+  maintenanceUntil?: Date | null;
+
   @Prop({ default: 'vi' })
   language: string;
 

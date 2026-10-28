@@ -31,9 +31,11 @@ export class AdminSettingsController {
   }
 
   @Patch('maintenance')
-  @ApiOperation({ summary: 'Toggle maintenance mode' })
+  @ApiOperation({
+    summary: 'Toggle maintenance mode (until = HH:mm today when enabling)',
+  })
   setMaintenanceMode(@Body() body: ToggleMaintenanceDto) {
-    return this.settingService.setMaintenanceMode(body.enabled);
+    return this.settingService.setMaintenanceMode(body.enabled, body.until);
   }
 
   @Patch('language')
