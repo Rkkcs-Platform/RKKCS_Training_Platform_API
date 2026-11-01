@@ -458,6 +458,34 @@ export class OrdersService {
     return this.toDetail(refreshed);
   }
 
+  /** Remove order + payment + shipment + items created from a transaction code. */
+  async deleteByTransactionCode(transactionCode: string): Promise<boolean> {
+    const code = transactionCode.trim().toUpperCase();
+    if (!code) return false;
+
+    const order = await this.orderModel
+      .findOne({ transactionCode: code })
+      .exec();
+    if (!order) return false;
+
+    const customer = await this.customerModel.findById(order.customerId).exec();
+    if (customer) {
+      customer.totalSpent = Math.max(
+        0,
+        customer.totalSpent - (order.amount || 0),
+      );
+      await customer.save();
+    }
+
+    await Promise.all([
+      this.paymentModel.deleteMany({ orderId: order._id }).exec(),
+      this.shipmentModel.deleteMany({ orderId: order._id }).exec(),
+      this.orderItemModel.deleteMany({ orderId: order._id }).exec(),
+    ]);
+    await this.orderModel.deleteOne({ _id: order._id }).exec();
+    return true;
+  }
+
   async ensureDefaultOrderItem(order: OrderDocument) {
     const existing = await this.orderItemModel
       .countDocuments({ orderId: order._id })

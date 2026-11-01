@@ -129,6 +129,7 @@ export class SettingsService implements OnModuleInit {
   async setMaintenanceMode(
     enabled: boolean,
     untilTime?: string,
+    untilDate?: string,
   ): Promise<MaintenanceStatus> {
     if (!enabled) {
       await this.challengeSettingModel.updateOne(
@@ -138,7 +139,7 @@ export class SettingsService implements OnModuleInit {
       return this.getMaintenanceStatus();
     }
 
-    const until = this.resolveMaintenanceUntil(untilTime);
+    const until = this.resolveMaintenanceUntil(untilTime, untilDate);
     await this.challengeSettingModel.updateOne(
       { isDefault: true },
       { $set: { maintenanceMode: true, maintenanceUntil: until } },
@@ -164,12 +165,15 @@ export class SettingsService implements OnModuleInit {
     return true;
   }
 
-  private resolveMaintenanceUntil(untilTime?: string): Date {
+  private resolveMaintenanceUntil(untilTime?: string, untilDate?: string): Date {
     if (!untilTime || !/^\d{2}:\d{2}$/.test(untilTime)) {
-      throw new BadRequestException(
-        'Chọn giờ kết thúc bảo trì (HH:mm) trong ngày hôm nay',
-      );
+      throw new BadRequestException('Chọn giờ mở lại hệ thống (HH:mm)');
     }
+
+    const date =
+      untilDate && /^\d{4}-\d{2}-\d{2}$/.test(untilDate)
+        ? untilDate
+        : dayjs().tz(APP_TIMEZONE).format('YYYY-MM-DD');
 
     const [hourText, minuteText] = untilTime.split(':');
     const hour = Number(hourText);
@@ -182,19 +186,38 @@ export class SettingsService implements OnModuleInit {
       minute < 0 ||
       minute > 59
     ) {
-      throw new BadRequestException('Giờ kết thúc bảo trì không hợp lệ');
+      throw new BadRequestException('Giờ mở lại hệ thống không hợp lệ');
+    }
+
+    const [yearText, monthText, dayText] = date.split('-');
+    const year = Number(yearText);
+    const month = Number(monthText);
+    const day = Number(dayText);
+    if (
+      !Number.isInteger(year) ||
+      !Number.isInteger(month) ||
+      !Number.isInteger(day)
+    ) {
+      throw new BadRequestException('Ngày mở lại hệ thống không hợp lệ');
     }
 
     const until = dayjs()
       .tz(APP_TIMEZONE)
+      .year(year)
+      .month(month - 1)
+      .date(day)
       .hour(hour)
       .minute(minute)
       .second(0)
       .millisecond(0);
 
+    if (!until.isValid()) {
+      throw new BadRequestException('Ngày mở lại hệ thống không hợp lệ');
+    }
+
     if (!until.isAfter(dayjs().tz(APP_TIMEZONE))) {
       throw new BadRequestException(
-        'Giờ kết thúc phải sau thời điểm hiện tại trong hôm nay',
+        'Thời điểm mở lại phải sau thời điểm hiện tại',
       );
     }
 

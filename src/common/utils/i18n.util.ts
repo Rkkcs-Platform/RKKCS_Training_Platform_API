@@ -104,6 +104,16 @@ const translations: Record<string, Record<ApiLocale, string>> = {
     vi: 'Câu trả lời này đã đúng, không thể gửi lại',
     ja: 'この回答は既に正解であり、再送信できません',
   },
+  'submission.answer_deleted': {
+    en: 'Entered code deleted',
+    vi: 'Đã xóa mã đã nhập',
+    ja: '入力コードを削除しました',
+  },
+  'submission.invalid_answer_order': {
+    en: 'Invalid answer order',
+    vi: 'Thứ tự mã không hợp lệ',
+    ja: '回答の順序が無効です',
+  },
 
   // ── Common / Validation ───────────────────────────────────────────────
   'common.invalid_date': {

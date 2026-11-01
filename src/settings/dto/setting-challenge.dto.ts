@@ -28,7 +28,15 @@ export class ToggleMaintenanceDto {
   @IsBoolean()
   enabled: boolean;
 
-  /** End time today as HH:mm (Asia/Ho_Chi_Minh). Required when enabling. */
+  /** End date as YYYY-MM-DD (Asia/Ho_Chi_Minh). Required when enabling. */
+  @ValidateIf((dto: ToggleMaintenanceDto) => dto.enabled === true)
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'untilDate must be YYYY-MM-DD',
+  })
+  untilDate?: string;
+
+  /** End time as HH:mm (Asia/Ho_Chi_Minh). Required when enabling. */
   @ValidateIf((dto: ToggleMaintenanceDto) => dto.enabled === true)
   @IsString()
   @Matches(/^\d{2}:\d{2}$/, {

@@ -339,6 +339,113 @@ export class SubmissionsService {
     return this.toAdminDetail(submission);
   }
 
+  async deleteAdminAnswer(
+    submissionId: string,
+    order: number,
+    admin: UserDocument,
+    locale: ApiLocale = 'en',
+  ) {
+    return this.deleteAdminAnswers(submissionId, [order], admin, locale);
+  }
+
+  async deleteAdminAnswers(
+    submissionId: string,
+    orders: number[],
+    admin: UserDocument,
+    locale: ApiLocale = 'en',
+  ) {
+    if (!Types.ObjectId.isValid(submissionId)) {
+      throw new BadRequestException(t('submission.invalid_id', locale));
+    }
+
+    const uniqueOrders = [
+      ...new Set(
+        orders.filter((order) => Number.isInteger(order) && order >= 1),
+      ),
+    ];
+
+    if (!uniqueOrders.length) {
+      throw new BadRequestException(
+        t('submission.invalid_answer_order', locale),
+      );
+    }
+
+    const submission = await this.submissionModel
+      .findById(submissionId)
+      .populate('userId', 'name email staffCode')
+      .exec();
+
+    if (!submission) {
+      throw new NotFoundException(t('submission.not_found', locale));
+    }
+
+    const orderSet = new Set(uniqueOrders);
+    const missing = uniqueOrders.filter(
+      (order) => !submission.answers.some((answer) => answer.order === order),
+    );
+    if (missing.length) {
+      throw new NotFoundException(t('submission.answer_not_found', locale));
+    }
+
+    const removedAnswers = submission.answers.filter((answer) =>
+      orderSet.has(answer.order),
+    );
+    submission.answers = submission.answers.filter(
+      (answer) => !orderSet.has(answer.order),
+    );
+
+    for (const removed of removedAnswers) {
+      if (!removed.isCorrect) continue;
+      const removedCode = (
+        removed.matchedCode || removed.inputCode
+      ).toUpperCase();
+      await this.ordersService
+        .deleteByTransactionCode(removedCode)
+        .catch(() => false);
+    }
+
+    submission.answers.forEach((answer, index) => {
+      answer.order = index + 1;
+    });
+
+    submission.totalSubmitted = submission.answers.length;
+    submission.totalCorrect = submission.answers.filter(
+      (answer) => answer.isCorrect,
+    ).length;
+    submission.totalWrong = submission.totalSubmitted - submission.totalCorrect;
+    submission.accuracy = calculateAccuracy(
+      submission.totalCorrect,
+      submission.totalSubmitted,
+    );
+
+    if (submission.status === SubmissionStatus.COMPLETED) {
+      submission.status = SubmissionStatus.IN_PROGRESS;
+      submission.set('completedAt', null);
+    }
+
+    submission.markModified('answers');
+    await submission.save();
+
+    this.activityLogsService.recordFromUser(admin, {
+      action: ACTIVITY_ACTION.CODE_DELETE,
+      targetType: ACTIVITY_TARGET.SUBMISSION,
+      targetId: submission._id,
+      metadata: {
+        date: submission.date,
+        shopId: submission.shopId?.toString(),
+        orders: uniqueOrders,
+        removed: removedAnswers.map((answer) => ({
+          order: answer.order,
+          inputCode: answer.inputCode,
+          matchedCode: answer.matchedCode,
+          wasCorrect: answer.isCorrect,
+        })),
+      },
+    });
+
+    return this.toAdminDetail(submission);
+  }
+
   async getStatistics(user: UserDocument) {
     const submissions = await this.submissionModel
       .find({ userId: user._id })
