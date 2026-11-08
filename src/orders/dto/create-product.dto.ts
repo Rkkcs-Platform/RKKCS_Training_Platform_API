@@ -19,7 +19,7 @@ export class CreateProductDto {
   @MaxLength(32)
   productCode: string;
 
-  @ApiProperty({ example: 'Gói vận hành RKKCS' })
+  @ApiProperty({ example: 'Gói vận hành RKK CSJ' })
   @IsString()
   @MinLength(2)
   @MaxLength(120)

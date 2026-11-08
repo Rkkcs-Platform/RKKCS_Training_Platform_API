@@ -25,8 +25,8 @@ async function bootstrap() {
   );
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('RKKCS Operations Platform API')
-    .setDescription('API documentation for RKKCS Operations Platform')
+    .setTitle('RKK CSJ Operations Platform API')
+    .setDescription('API documentation for RKK CSJ Operations Platform')
     .setVersion('1.0')
     .addBearerAuth()
     .build();

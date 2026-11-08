@@ -295,7 +295,7 @@ export class OrdersService {
         shipment = await this.shipmentModel.create({
           orderId: order._id,
           shipmentCode: `SHP-${order.transactionCode}`,
-          carrier: 'RKKCS Express',
+          carrier: 'RKK CSJ Express',
           status: ShipmentStatus.PENDING,
           currentLocation: map.currentLocationText,
           deliveryAddress: map.deliveryAddressText,

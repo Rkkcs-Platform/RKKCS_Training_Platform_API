@@ -45,7 +45,7 @@ export class GeocodeService {
     try {
       const response = await fetch(url, {
         headers: {
-          'User-Agent': 'RKKCS-Operations-Platform/1.0 (local-dev; contact@rkkcs.local)',
+          'User-Agent': 'RKK-CSJ-Operations-Platform/1.0 (local-dev; contact@rkk-csj.local)',
           Accept: 'application/json',
         },
       });
