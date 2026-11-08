@@ -9,14 +9,14 @@ import {
 import { NewsStatus } from '../../common/enums';
 
 export class CreateNewsDto {
-  @ApiProperty({ example: 'Ra mắt RKKCS Operations Platform' })
+  @ApiProperty({ example: 'Ra mắt RKK CSJ Operations Platform' })
   @IsString()
   @MinLength(3)
   @MaxLength(200)
   title: string;
 
   @ApiPropertyOptional({
-    example: 'ra-mat-rkkcs-operations-platform',
+    example: 'ra-mat-rkk-csj-operations-platform',
     description: 'Auto-generated from title if omitted',
   })
   @IsOptional()

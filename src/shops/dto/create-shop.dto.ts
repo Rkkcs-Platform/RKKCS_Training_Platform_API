@@ -18,7 +18,7 @@ export class CreateShopDto {
   @MaxLength(32)
   shopCode: string;
 
-  @ApiProperty({ example: 'RKKCS Demo Shop' })
+  @ApiProperty({ example: 'RKK CSJ Demo Shop' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(120)

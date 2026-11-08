@@ -10,7 +10,7 @@ import {
 import { ShopStatus } from '../../common/enums';
 
 export class UpdateShopDto {
-  @ApiPropertyOptional({ example: 'RKKCS Demo Shop' })
+  @ApiPropertyOptional({ example: 'RKK CSJ Demo Shop' })
   @IsOptional()
   @IsString()
   @MaxLength(120)

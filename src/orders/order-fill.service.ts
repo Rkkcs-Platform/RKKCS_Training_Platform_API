@@ -633,7 +633,7 @@ export class OrderFillService {
     const address = shipment.deliveryAddress || '';
     return (
       !carrier ||
-      /^rkkcs express$/i.test(carrier) ||
+      /^rkk csj express$/i.test(carrier) ||
       !address.includes('〒') ||
       address.includes('(mock)') ||
       address.includes('TP.HCM')
